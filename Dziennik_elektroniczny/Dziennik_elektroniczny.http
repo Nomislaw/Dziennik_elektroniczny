@@ -1,0 +1,6 @@
+@Dziennik_elektroniczny_HostAddress = http://localhost:5273
+
+GET {{Dziennik_elektroniczny_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
