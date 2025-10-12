@@ -12,4 +12,5 @@ dotnet ef database update
 https://nodejs.org
 
 npx create-react-app frontend --template typescript
+
 npm start
