@@ -1,21 +1,19 @@
-import { useEffect, useState } from "react";
-import { getBooks, addBook } from "./api";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import Login from "./components/Login";
+import Register from "./components/Register";
 
 export default function App() {
-  const [books, setBooks] = useState<any[]>([]);
-
-  useEffect(() => {
-    getBooks().then(setBooks);
-  }, []);
-
   return (
-    <div className="p-4">
-      <h1>📚 Lista dzienników</h1>
-      <ul>
-        {books.map((b) => (
-          <li key={b.id}>{b.title} — {b.author} ({b.year})</li>
-        ))}
-      </ul>
-    </div>
+    <Router>
+      <nav className="flex justify-center gap-4 p-4 bg-blue-200">
+        <Link to="/login">🔑 Logowanie</Link>
+        <Link to="/register">🧾 Rejestracja</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
   );
 }
