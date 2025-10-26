@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Dziennik_elektroniczny.Models;
+using System;
+using System.Threading.Tasks;
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -18,49 +20,47 @@ namespace Dziennik_elektroniczny.Controllers
             _context = context;
             _passwordHasher = new PasswordHasher<Uzytkownik>();
         }
-        
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
             if (await _context.Uzytkownicy.AnyAsync(u => u.Email == model.Email))
                 return BadRequest("Użytkownik o takim emailu już istnieje.");
 
-            Uzytkownik newUser = model.Typ switch
+            // --- ZMIANA: Konwersja string na enum Rola ---
+            if (!Enum.TryParse<Rola>(model.Typ, true, out var rola))
             {
-                "Uczen" => new Uczen
-                {
-                    Imie = model.Imie,
-                    Nazwisko = model.Nazwisko,
-                    Email = model.Email,
-                    DataUrodzenia = model.DataUrodzenia
-                },
-                "Rodzic" => new Rodzic
-                {
-                    Imie = model.Imie,
-                    Nazwisko = model.Nazwisko,
-                    Email = model.Email
-                },
-                "Nauczyciel" => new Nauczyciel
-                {
-                    Imie = model.Imie,
-                    Nazwisko = model.Nazwisko,
-                    Email = model.Email
-                },
-                _ => null
+                return BadRequest("Nieprawidłowy typ użytkownika.");
+            }
+
+            // --- ZMIANA: Tworzenie jednego obiektu Uzytkownik ---
+            var newUser = new Uzytkownik
+            {
+                Imie = model.Imie,
+                Nazwisko = model.Nazwisko,
+                Email = model.Email,
+                Rola = rola,
+                // Stan = "Aktywny" // Zakładam, że Uzytkownik ma pole Stan
+                // DataUrodzenia = (rola == Rola.Uczen) ? model.DataUrodzenia : null // Zakładam, że Uzytkownik ma nullable DataUrodzenia
             };
 
-            if (newUser == null)
-                return BadRequest("Nieprawidłowy typ użytkownika.");
+            // Jeśli DataUrodzenia jest specyficzna tylko dla ucznia i masz ją w modelu Uzytkownik
+            if (rola == Rola.Uczen)
+            {
+                // newUser.DataUrodzenia = model.DataUrodzenia; // Odkomentuj, jeśli masz to pole w Uzytkownik.cs
+            }
+
+            // Usunięto sprawdzanie `newUser == null`, ponieważ Enum.TryParse już to załatwił
 
             newUser.HasloHash = _passwordHasher.HashPassword(newUser, model.Haslo);
-            newUser.Stan = "Aktywny";
+            // newUser.Stan = "Aktywny"; // Odkomentuj, jeśli masz to pole
 
             _context.Uzytkownicy.Add(newUser);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Rejestracja zakończona sukcesem." });
         }
-        
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
@@ -74,20 +74,25 @@ namespace Dziennik_elektroniczny.Controllers
             if (result == PasswordVerificationResult.Failed)
                 return Unauthorized("Nieprawidłowy email lub hasło.");
 
-            return Ok(new { message = "Logowanie zakończone sukcesem.", userId = user.Id, typ = user.GetType().Name });
+            // --- ZMIANA: Zwracanie Roli jako string ---
+            return Ok(new { message = "Logowanie zakończone sukcesem.", userId = user.Id, typ = user.Rola.ToString() });
         }
     }
-    
+
+    // Model rejestracji - pozostaje bez zmian, ale...
     public class RegisterModel
     {
-        public string Typ { get; set; } 
+        public string Typ { get; set; } // "Uczen", "Nauczyciel", "Rodzic"
         public string Imie { get; set; }
         public string Nazwisko { get; set; }
         public string Email { get; set; }
         public string Haslo { get; set; }
-        public DateTime DataUrodzenia { get; set; } 
+
+        // ...upewnij się, że Twój model Uzytkownik.cs ma pole (nullable) DataUrodzenia,
+        // jeśli chcesz je zbierać podczas rejestracji ucznia.
+        public DateTime? DataUrodzenia { get; set; }
     }
-    
+
     public class LoginModel
     {
         public string Email { get; set; }

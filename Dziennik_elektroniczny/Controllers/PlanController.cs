@@ -13,7 +13,7 @@ namespace Dziennik_elektroniczny.Controllers
     {
         private readonly AppDbContext _context;
 
-        public PlanyController(AppDbContext context)
+        public PlanController(AppDbContext context)
         {
             _context = context;
         }

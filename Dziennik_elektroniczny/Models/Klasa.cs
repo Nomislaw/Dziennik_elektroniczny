@@ -4,19 +4,19 @@ namespace Dziennik_elektroniczny.Models
 {
     public class Klasa
     {
-        public int Id { get; set; } // Klucz główny
-        public string Nazwa { get; set; } // Np. "1A", "3C"
-        public int Rok { get; set; } // Np. 2025
+        public int Id { get; set; }
+        public string Nazwa { get; set; }
+        public int Rok { get; set; }
 
-        // Relacja 1-do-wielu: Klasa ma wielu uczniów
-        public virtual ICollection<Uczen> Uczniowie { get; set; } = new List<Uczen>();
+        // Relacja 1-do-wielu: Klasa ma wielu uczniów (teraz typu Uzytkownik)
+        public virtual ICollection<Uzytkownik> Uczniowie { get; set; } = new List<Uzytkownik>();
 
-        // Relacja 1-do-1: Klasa ma jednego wychowawcę
-        public int WychowawcaId { get; set; } // Klucz obcy
-        public virtual Nauczyciel Wychowawca { get; set; }
+        // Relacja 1-do-1: Klasa ma jednego wychowawcę (teraz typu Uzytkownik)
+        public int? WychowawcaId { get; set; } // Klucz obcy, nullable
+        public virtual Uzytkownik Wychowawca { get; set; }
 
         // Relacja 1-do-1: Klasa ma jeden plan zajęć
-        public int? PlanId { get; set; } // Klucz obcy, może być null
+        public int? PlanId { get; set; }
         public virtual Plan Plan { get; set; }
     }
 }
