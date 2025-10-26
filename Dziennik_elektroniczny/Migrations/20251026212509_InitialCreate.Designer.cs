@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Dziennik_elektroniczny.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251019172344_RemovingLogin")]
-    partial class RemovingLogin
+    [Migration("20251026212509_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -73,7 +73,7 @@ namespace Dziennik_elektroniczny.Migrations
                     b.Property<int>("Rok")
                         .HasColumnType("int");
 
-                    b.Property<int>("WychowawcaId")
+                    b.Property<int?>("WychowawcaId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -214,11 +214,6 @@ namespace Dziennik_elektroniczny.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("varchar(13)");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -231,21 +226,22 @@ namespace Dziennik_elektroniczny.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("KlasaId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nazwisko")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Stan")
+                    b.Property<string>("Rola")
                         .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("KlasaId");
+
                     b.ToTable("Uzytkownicy");
-
-                    b.HasDiscriminator().HasValue("Uzytkownik");
-
-                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Zadanie", b =>
@@ -323,53 +319,24 @@ namespace Dziennik_elektroniczny.Migrations
                     b.ToTable("Zajecia");
                 });
 
-            modelBuilder.Entity("RodzicUczen", b =>
+            modelBuilder.Entity("Opieka", b =>
                 {
-                    b.Property<int>("DzieciId")
+                    b.Property<int>("RodzicId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RodziceId")
+                    b.Property<int>("UczenId")
                         .HasColumnType("int");
 
-                    b.HasKey("DzieciId", "RodziceId");
+                    b.HasKey("RodzicId", "UczenId");
 
-                    b.HasIndex("RodziceId");
+                    b.HasIndex("UczenId");
 
-                    b.ToTable("RodzicUczen");
-                });
-
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Nauczyciel", b =>
-                {
-                    b.HasBaseType("Dziennik_elektroniczny.Models.Uzytkownik");
-
-                    b.HasDiscriminator().HasValue("Nauczyciel");
-                });
-
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Rodzic", b =>
-                {
-                    b.HasBaseType("Dziennik_elektroniczny.Models.Uzytkownik");
-
-                    b.HasDiscriminator().HasValue("Rodzic");
-                });
-
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Uczen", b =>
-                {
-                    b.HasBaseType("Dziennik_elektroniczny.Models.Uzytkownik");
-
-                    b.Property<DateTime>("DataUrodzenia")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("KlasaId")
-                        .HasColumnType("int");
-
-                    b.HasIndex("KlasaId");
-
-                    b.HasDiscriminator().HasValue("Uczen");
+                    b.ToTable("Opieka");
                 });
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Frekwencja", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Uczen", "Uczen")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Uczen")
                         .WithMany("Frekwencje")
                         .HasForeignKey("UczenId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -388,18 +355,17 @@ namespace Dziennik_elektroniczny.Migrations
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Klasa", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Nauczyciel", "Wychowawca")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Wychowawca")
                         .WithOne("Wychowawstwo")
                         .HasForeignKey("Dziennik_elektroniczny.Models.Klasa", "WychowawcaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Wychowawca");
                 });
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Ocena", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Nauczyciel", "Nauczyciel")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Nauczyciel")
                         .WithMany("WystawioneOceny")
                         .HasForeignKey("NauczycielId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -411,7 +377,7 @@ namespace Dziennik_elektroniczny.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Dziennik_elektroniczny.Models.Uczen", "Uczen")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Uczen")
                         .WithMany("Oceny")
                         .HasForeignKey("UczenId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -443,12 +409,22 @@ namespace Dziennik_elektroniczny.Migrations
                     b.Navigation("Semestr");
                 });
 
+            modelBuilder.Entity("Dziennik_elektroniczny.Models.Uzytkownik", b =>
+                {
+                    b.HasOne("Dziennik_elektroniczny.Models.Klasa", "Klasa")
+                        .WithMany("Uczniowie")
+                        .HasForeignKey("KlasaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Klasa");
+                });
+
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Zadanie", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Nauczyciel", "Nauczyciel")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Nauczyciel")
                         .WithMany("UtworzoneZadania")
                         .HasForeignKey("NauczycielId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Dziennik_elektroniczny.Models.Przedmiot", "Przedmiot")
@@ -464,10 +440,10 @@ namespace Dziennik_elektroniczny.Migrations
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Zajecia", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Nauczyciel", "Nauczyciel")
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", "Nauczyciel")
                         .WithMany("ProwadzoneZajecia")
                         .HasForeignKey("NauczycielId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Dziennik_elektroniczny.Models.Plan", "Plan")
@@ -497,30 +473,19 @@ namespace Dziennik_elektroniczny.Migrations
                     b.Navigation("Sala");
                 });
 
-            modelBuilder.Entity("RodzicUczen", b =>
+            modelBuilder.Entity("Opieka", b =>
                 {
-                    b.HasOne("Dziennik_elektroniczny.Models.Uczen", null)
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", null)
                         .WithMany()
-                        .HasForeignKey("DzieciId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Dziennik_elektroniczny.Models.Rodzic", null)
-                        .WithMany()
-                        .HasForeignKey("RodziceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Uczen", b =>
-                {
-                    b.HasOne("Dziennik_elektroniczny.Models.Klasa", "Klasa")
-                        .WithMany("Uczniowie")
-                        .HasForeignKey("KlasaId")
+                        .HasForeignKey("RodzicId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Klasa");
+                    b.HasOne("Dziennik_elektroniczny.Models.Uzytkownik", null)
+                        .WithMany()
+                        .HasForeignKey("UczenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Dziennik_elektroniczny.Models.Klasa", b =>
@@ -555,13 +520,12 @@ namespace Dziennik_elektroniczny.Migrations
                     b.Navigation("Plany");
                 });
 
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Zajecia", b =>
+            modelBuilder.Entity("Dziennik_elektroniczny.Models.Uzytkownik", b =>
                 {
                     b.Navigation("Frekwencje");
-                });
 
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Nauczyciel", b =>
-                {
+                    b.Navigation("Oceny");
+
                     b.Navigation("ProwadzoneZajecia");
 
                     b.Navigation("UtworzoneZadania");
@@ -572,11 +536,9 @@ namespace Dziennik_elektroniczny.Migrations
                     b.Navigation("WystawioneOceny");
                 });
 
-            modelBuilder.Entity("Dziennik_elektroniczny.Models.Uczen", b =>
+            modelBuilder.Entity("Dziennik_elektroniczny.Models.Zajecia", b =>
                 {
                     b.Navigation("Frekwencje");
-
-                    b.Navigation("Oceny");
                 });
 #pragma warning restore 612, 618
         }

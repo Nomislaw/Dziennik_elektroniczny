@@ -1,101 +1,103 @@
-﻿using Dziennik_elektroniczny.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using System.ComponentModel.DataAnnotations;
 using Dziennik_elektroniczny.Models;
-using System;
-using System.Threading.Tasks;
+using Dziennik_elektroniczny.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace Dziennik_elektroniczny.Controllers
+namespace Dziennik_elektroniczny.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    private readonly AppDbContext _context;
+    private readonly PasswordHasher<Uzytkownik> _passwordHasher = new();
+
+    public AuthController(AppDbContext context)
     {
-        private readonly AppDbContext _context;
-        private readonly PasswordHasher<Uzytkownik> _passwordHasher;
-
-        public AuthController(AppDbContext context)
-        {
-            _context = context;
-            _passwordHasher = new PasswordHasher<Uzytkownik>();
-        }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
-        {
-            if (await _context.Uzytkownicy.AnyAsync(u => u.Email == model.Email))
-                return BadRequest("Użytkownik o takim emailu już istnieje.");
-
-            // --- ZMIANA: Konwersja string na enum Rola ---
-            if (!Enum.TryParse<Rola>(model.Typ, true, out var rola))
-            {
-                return BadRequest("Nieprawidłowy typ użytkownika.");
-            }
-
-            // --- ZMIANA: Tworzenie jednego obiektu Uzytkownik ---
-            var newUser = new Uzytkownik
-            {
-                Imie = model.Imie,
-                Nazwisko = model.Nazwisko,
-                Email = model.Email,
-                Rola = rola,
-                // Stan = "Aktywny" // Zakładam, że Uzytkownik ma pole Stan
-                // DataUrodzenia = (rola == Rola.Uczen) ? model.DataUrodzenia : null // Zakładam, że Uzytkownik ma nullable DataUrodzenia
-            };
-
-            // Jeśli DataUrodzenia jest specyficzna tylko dla ucznia i masz ją w modelu Uzytkownik
-            if (rola == Rola.Uczen)
-            {
-                // newUser.DataUrodzenia = model.DataUrodzenia; // Odkomentuj, jeśli masz to pole w Uzytkownik.cs
-            }
-
-            // Usunięto sprawdzanie `newUser == null`, ponieważ Enum.TryParse już to załatwił
-
-            newUser.HasloHash = _passwordHasher.HashPassword(newUser, model.Haslo);
-            // newUser.Stan = "Aktywny"; // Odkomentuj, jeśli masz to pole
-
-            _context.Uzytkownicy.Add(newUser);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Rejestracja zakończona sukcesem." });
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
-        {
-            var user = await _context.Uzytkownicy
-                .FirstOrDefaultAsync(u => u.Email == model.Email);
-
-            if (user == null)
-                return Unauthorized("Nieprawidłowy email lub hasło.");
-
-            var result = _passwordHasher.VerifyHashedPassword(user, user.HasloHash, model.Haslo);
-            if (result == PasswordVerificationResult.Failed)
-                return Unauthorized("Nieprawidłowy email lub hasło.");
-
-            // --- ZMIANA: Zwracanie Roli jako string ---
-            return Ok(new { message = "Logowanie zakończone sukcesem.", userId = user.Id, typ = user.Rola.ToString() });
-        }
+        _context = context;
     }
 
-    // Model rejestracji - pozostaje bez zmian, ale...
-    public class RegisterModel
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        public string Typ { get; set; } // "Uczen", "Nauczyciel", "Rodzic"
-        public string Imie { get; set; }
-        public string Nazwisko { get; set; }
-        public string Email { get; set; }
-        public string Haslo { get; set; }
+        var user = await _context.Uzytkownicy
+            .Include(u => u.Rodzice)
+            .Include(u => u.Dzieci)
+            .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        // ...upewnij się, że Twój model Uzytkownik.cs ma pole (nullable) DataUrodzenia,
-        // jeśli chcesz je zbierać podczas rejestracji ucznia.
-        public DateTime? DataUrodzenia { get; set; }
+        if (user == null)
+            return Unauthorized("Niepoprawny e-mail lub hasło");
+
+        var result = _passwordHasher.VerifyHashedPassword(user, user.HasloHash, request.Password);
+        if (result == PasswordVerificationResult.Failed)
+            return Unauthorized("Niepoprawny e-mail lub hasło");
+
+        return Ok(new
+        {
+            Id = user.Id,
+            Email = user.Email,
+            FirstName = user.Imie,
+            LastName = user.Nazwisko
+        });
     }
 
-    public class LoginModel
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
-        public string Email { get; set; }
-        public string Haslo { get; set; }
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        if (await _context.Uzytkownicy.AnyAsync(u => u.Email == req.Email))
+            return BadRequest("Ten adres e-mail jest już zarejestrowany");
+
+        var user = new Uzytkownik
+        {
+            Email = req.Email,
+            Imie = req.FirstName,
+            Nazwisko = req.LastName,
+            Rola = Rola.Uczen // <-- domyślna rola
+        };
+
+        var passwordHasher = new PasswordHasher<Uzytkownik>();
+        user.HasloHash = passwordHasher.HashPassword(user, req.Password);
+
+        _context.Uzytkownicy.Add(user);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { user.Id, user.Email, Role = user.Rola.ToString() });
     }
+
+}
+
+// DTOs
+public class LoginRequest
+{
+    [Required]
+    [EmailAddress(ErrorMessage = "Niepoprawny adres e-mail.")]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
+}
+
+public class RegisterRequest
+{
+    [Required]
+    [MinLength(8, ErrorMessage = "Hasło musi mieć co najmniej 8 znaków.")]
+    [RegularExpression(@"^(?=(?:.*\d){3,})(?=.*[!@#$%^&*(),.?""{}|<>])(?=.*[A-Z]).*$",
+        ErrorMessage = "Hasło musi zawierać co najmniej 3 cyfry, 1 znak specjalny i 1 wielką literę.")]
+    public string Password { get; set; } = "";
+
+    [Required]
+    public string FirstName { get; set; } = "";
+
+    [Required]
+    public string LastName { get; set; } = "";
+
+    [Required]
+    [EmailAddress(ErrorMessage = "Niepoprawny adres e-mail.")]
+    public string Email { get; set; } = "";
+    
 }

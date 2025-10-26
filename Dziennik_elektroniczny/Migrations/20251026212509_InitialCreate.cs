@@ -88,7 +88,7 @@ namespace Dziennik_elektroniczny.Migrations
                     Nazwa = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Rok = table.Column<int>(type: "int", nullable: false),
-                    WychowawcaId = table.Column<int>(type: "int", nullable: false),
+                    WychowawcaId = table.Column<int>(type: "int", nullable: true),
                     PlanId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -136,15 +136,10 @@ namespace Dziennik_elektroniczny.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Email = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Login = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
                     HasloHash = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Stan = table.Column<string>(type: "longtext", nullable: false)
+                    Rola = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Discriminator = table.Column<string>(type: "varchar(13)", maxLength: 13, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DataUrodzenia = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     KlasaId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -200,24 +195,24 @@ namespace Dziennik_elektroniczny.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "RodzicUczen",
+                name: "Opieka",
                 columns: table => new
                 {
-                    DzieciId = table.Column<int>(type: "int", nullable: false),
-                    RodziceId = table.Column<int>(type: "int", nullable: false)
+                    RodzicId = table.Column<int>(type: "int", nullable: false),
+                    UczenId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RodzicUczen", x => new { x.DzieciId, x.RodziceId });
+                    table.PrimaryKey("PK_Opieka", x => new { x.RodzicId, x.UczenId });
                     table.ForeignKey(
-                        name: "FK_RodzicUczen_Uzytkownicy_DzieciId",
-                        column: x => x.DzieciId,
+                        name: "FK_Opieka_Uzytkownicy_RodzicId",
+                        column: x => x.RodzicId,
                         principalTable: "Uzytkownicy",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_RodzicUczen_Uzytkownicy_RodziceId",
-                        column: x => x.RodziceId,
+                        name: "FK_Opieka_Uzytkownicy_UczenId",
+                        column: x => x.UczenId,
                         principalTable: "Uzytkownicy",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -252,7 +247,7 @@ namespace Dziennik_elektroniczny.Migrations
                         column: x => x.NauczycielId,
                         principalTable: "Uzytkownicy",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -297,7 +292,7 @@ namespace Dziennik_elektroniczny.Migrations
                         column: x => x.NauczycielId,
                         principalTable: "Uzytkownicy",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -333,6 +328,11 @@ namespace Dziennik_elektroniczny.Migrations
                 column: "UczenId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Opieka_UczenId",
+                table: "Opieka",
+                column: "UczenId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Plany_KlasaId",
                 table: "Plany",
                 column: "KlasaId",
@@ -342,11 +342,6 @@ namespace Dziennik_elektroniczny.Migrations
                 name: "IX_Plany_SemestrId",
                 table: "Plany",
                 column: "SemestrId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RodzicUczen_RodziceId",
-                table: "RodzicUczen",
-                column: "RodziceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Uzytkownicy_KlasaId",
@@ -422,7 +417,7 @@ namespace Dziennik_elektroniczny.Migrations
                 name: "Oceny");
 
             migrationBuilder.DropTable(
-                name: "RodzicUczen");
+                name: "Opieka");
 
             migrationBuilder.DropTable(
                 name: "Zadania");

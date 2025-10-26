@@ -1,12 +1,35 @@
+"use client";
+
 import { useState } from "react";
+import { login } from "../api/AuthService"; // import funkcji login z api.ts
+import { Uzytkownik } from "../types/Uzytkownik";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const router = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Logowanie:", form);
+    setError(null);
+    setLoading(true);
+
+    try {
+      const user: Uzytkownik = await login(form.email, form.password);
+      localStorage.setItem("user", JSON.stringify(user));
+      console.log("Zalogowano użytkownika:", user);
+  
+      router("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Błąd logowania");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -17,10 +40,14 @@ export default function Login() {
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {error && (
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          )}
           <input
             type="email"
             name="email"
             placeholder="Adres e-mail"
+            value={form.email}
             onChange={handleChange}
             className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
           />
@@ -28,14 +55,16 @@ export default function Login() {
             type="password"
             name="password"
             placeholder="Hasło"
+            value={form.password}
             onChange={handleChange}
             className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition"
+            disabled={loading}
+            className="bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            Zaloguj się
+            {loading ? "Logowanie..." : "Zaloguj się"}
           </button>
         </form>
 
