@@ -1,50 +1,50 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-export default function Login() {
-  const [form, setForm] = useState({ email: "", password: "" });
+interface LoginProps {
+  onLogin: () => void;
+}
 
-  const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e: any) => {
+export default function Login({ onLogin }: LoginProps) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Logowanie:", form);
+
+    // tu w przyszłości dodamy logikę logowania do backendu
+    onLogin();
+    navigate("/home");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-          🔑 Logowanie do Dziennika
-        </h2>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-96">
+        <h2 className="text-2xl font-semibold mb-4 text-center">🔑 Logowanie</h2>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <input
             type="email"
-            name="email"
-            placeholder="Adres e-mail"
-            onChange={handleChange}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+            placeholder="E-mail"
+            className="border p-2 rounded-lg"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <input
             type="password"
-            name="password"
             placeholder="Hasło"
-            onChange={handleChange}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+            className="border p-2 rounded-lg"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition"
+            className="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg"
           >
             Zaloguj się
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Nie masz konta?{" "}
-          <a href="/register" className="text-blue-600 font-medium hover:underline">
-            Zarejestruj się
-          </a>
-        </p>
       </div>
     </div>
   );
