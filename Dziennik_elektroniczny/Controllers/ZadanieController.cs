@@ -1,7 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -11,32 +14,36 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class ZadanieController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // ZMIANA: z AppDbContext na IGenericRepository<Zadanie>
+        private readonly IGenericRepository<Zadanie> _zadanieRepository;
 
-        public ZadanieController(AppDbContext context)
+        public ZadanieController(IGenericRepository<Zadanie> zadanieRepository) // ZMIANA
         {
-            _context = context;
+            _zadanieRepository = zadanieRepository;
         }
 
         // GET: api/Zadania
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Zadanie>>> GetZadania()
         {
-            return await _context.Zadania.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var zadania = await _zadanieRepository.GetAllAsync();
+            return Ok(zadania);
         }
 
         // GET: api/Zadania/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Zadanie>> GetZadanie(int id)
         {
-            var zadanie = await _context.Zadania.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var zadanie = await _zadanieRepository.GetByIdAsync(id);
 
             if (zadanie == null)
             {
                 return NotFound();
             }
 
-            return zadanie;
+            return Ok(zadanie); // ZMIANA: Dodano Ok() dla spójności
         }
 
         // PUT: api/Zadania/5
@@ -45,26 +52,15 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != zadanie.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _context.Entry(zadanie).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w UzytkownikController
+            _zadanieRepository.Update(zadanie);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Zadania.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _zadanieRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +69,33 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Zadanie>> PostZadanie(Zadanie zadanie)
         {
-            _context.Zadania.Add(zadanie);
-            await _context.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w UzytkownikController
+            _zadanieRepository.Add(zadanie);
+            var result = await _zadanieRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetZadanie", new { id = zadanie.Id }, zadanie);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać zadania.");
+
+            // Użycie nameof() jest bezpieczniejsze niż "GetZadanie"
+            return CreatedAtAction(nameof(GetZadanie), new { id = zadanie.Id }, zadanie);
         }
 
         // DELETE: api/Zadania/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteZadanie(int id)
         {
-            var zadanie = await _context.Zadania.FindAsync(id);
+            // ZMIANA: Logika usuwania jak w UzytkownikController
+            var zadanie = await _zadanieRepository.GetByIdAsync(id);
             if (zadanie == null)
             {
                 return NotFound();
             }
 
-            _context.Zadania.Remove(zadanie);
-            await _context.SaveChangesAsync();
+            _zadanieRepository.Delete(zadanie);
+            var result = await _zadanieRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć zadania.");
 
             return NoContent();
         }

@@ -1,9 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,32 +12,36 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class PrzedmiotController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // ZMIANA: z AppDbContext na IGenericRepository<Przedmiot>
+        private readonly IGenericRepository<Przedmiot> _przedmiotRepository;
 
-        public PrzedmiotController(AppDbContext context)
+        public PrzedmiotController(IGenericRepository<Przedmiot> przedmiotRepository) // ZMIANA
         {
-            _context = context;
+            _przedmiotRepository = przedmiotRepository;
         }
 
         // GET: api/Przedmioty
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Przedmiot>>> GetPrzedmioty()
         {
-            return await _context.Przedmioty.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var przedmioty = await _przedmiotRepository.GetAllAsync();
+            return Ok(przedmioty);
         }
 
         // GET: api/Przedmioty/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Przedmiot>> GetPrzedmiot(int id)
         {
-            var przedmiot = await _context.Przedmioty.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var przedmiot = await _przedmiotRepository.GetByIdAsync(id);
 
             if (przedmiot == null)
             {
                 return NotFound();
             }
 
-            return przedmiot;
+            return Ok(przedmiot); // ZMIANA: Dodano Ok() dla spójności
         }
 
         // PUT: api/Przedmioty/5
@@ -45,26 +50,15 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != przedmiot.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _context.Entry(przedmiot).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w OcenyController
+            _przedmiotRepository.Update(przedmiot);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Przedmioty.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _przedmiotRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +67,33 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Przedmiot>> PostPrzedmiot(Przedmiot przedmiot)
         {
-            _context.Przedmioty.Add(przedmiot);
-            await _context.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w OcenyController
+            _przedmiotRepository.Add(przedmiot);
+            var result = await _przedmiotRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetPrzedmiot", new { id = przedmiot.Id }, przedmiot);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać przedmiotu.");
+
+            // Użycie nameof() jest bezpieczniejsze niż "GetPrzedmiot"
+            return CreatedAtAction(nameof(GetPrzedmiot), new { id = przedmiot.Id }, przedmiot);
         }
 
         // DELETE: api/Przedmioty/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePrzedmiot(int id)
         {
-            var przedmiot = await _context.Przedmioty.FindAsync(id);
+            // ZMIANA: Logika usuwania jak w OcenyController
+            var przedmiot = await _przedmiotRepository.GetByIdAsync(id);
             if (przedmiot == null)
             {
                 return NotFound();
             }
 
-            _context.Przedmioty.Remove(przedmiot);
-            await _context.SaveChangesAsync();
+            _przedmiotRepository.Delete(przedmiot);
+            var result = await _przedmiotRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć przedmiotu.");
 
             return NoContent();
         }

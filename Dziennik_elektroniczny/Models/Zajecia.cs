@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Zajecia
+    public class Zajecia : BaseEntity
     {
-        public int Id { get; set; }
         public string GodzinaRozpoczecia { get; set; }
         public string GodzinaZakonczenia { get; set; }
 

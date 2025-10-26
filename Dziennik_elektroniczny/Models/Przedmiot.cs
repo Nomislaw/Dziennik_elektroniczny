@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Przedmiot
+    public class Przedmiot : BaseEntity
     {
-        public int Id { get; set; } // Klucz główny
         public string Nazwa { get; set; }
 
         // Relacja 1-do-wielu: Z przedmiotu jest wiele zajęć w planie

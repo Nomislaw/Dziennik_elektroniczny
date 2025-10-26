@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Sala
+    public class Sala : BaseEntity
     {
-        public int Id { get; set; } // Klucz główny
         public string Numer { get; set; }
 
         // Relacja 1-do-wielu: W sali odbywa się wiele zajęć

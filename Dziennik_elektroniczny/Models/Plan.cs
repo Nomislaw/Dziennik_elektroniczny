@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Plan
+    public class Plan : BaseEntity
     {
-        public int Id { get; set; } // Klucz główny
 
         // Relacja 1-do-1 (odwrotność): Plan jest przypisany do jednej klasy
         public int KlasaId { get; set; } // Klucz obcy

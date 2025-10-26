@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Zadanie
+    public class Zadanie : BaseEntity
     {
-        public int Id { get; set; }
         public DateTime DataOddania { get; set; }
         public string Opis { get; set; }
         public string Tytul { get; set; }

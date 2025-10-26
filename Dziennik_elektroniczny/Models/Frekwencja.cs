@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Frekwencja
+    public class Frekwencja : BaseEntity
     {
-        public int Id { get; set; }
         public DateTime Data { get; set; }
         public Status Status { get; set; }
 

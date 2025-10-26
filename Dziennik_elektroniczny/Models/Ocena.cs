@@ -1,8 +1,8 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Ocena
+    public class Ocena : BaseEntity
     {
-        public int Id { get; set; }
+
         public DateTime DataWystawienia { get; set; }
         public string Opis { get; set; }
         public float Wartosc { get; set; }

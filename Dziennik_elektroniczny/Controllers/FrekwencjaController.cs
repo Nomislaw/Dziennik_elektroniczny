@@ -1,4 +1,5 @@
 ﻿using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,32 +12,42 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class FrekwencjaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IGenericRepository<Frekwencja> _frekwencjaRepository;
 
-        public FrekwencjaController(AppDbContext context)
+        public FrekwencjaController(IGenericRepository<Frekwencja> frekwencjaRepository)
         {
-            _context = context;
+            _frekwencjaRepository = frekwencjaRepository;
         }
 
         // GET: api/Frekwencje
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Frekwencja>>> GetFrekwencje()
         {
-            return await _context.Frekwencje.ToListAsync();
+            try
+            {
+                var fr = await _frekwencjaRepository.GetAllAsync();
+
+                if (fr == null || !fr.Any())
+                    return NotFound("Nie znaleziono żadnych frekwencji.");
+
+                return Ok(fr);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Wystąpił błąd: {ex.Message}");
+            }
         }
 
         // GET: api/Frekwencje/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Frekwencja>> GetFrekwencja(int id)
         {
-            var frekwencja = await _context.Frekwencje.FindAsync(id);
+            var frekwencja = await _frekwencjaRepository.GetByIdAsync(id);
 
             if (frekwencja == null)
-            {
                 return NotFound();
-            }
 
-            return frekwencja;
+            return Ok(frekwencja);
         }
 
         // PUT: api/Frekwencje/5
@@ -44,27 +55,13 @@ namespace Dziennik_elektroniczny.Controllers
         public async Task<IActionResult> PutFrekwencja(int id, Frekwencja frekwencja)
         {
             if (id != frekwencja.Id)
-            {
-                return BadRequest();
-            }
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
 
-            _context.Entry(frekwencja).State = EntityState.Modified;
+            _frekwencjaRepository.Update(frekwencja);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Frekwencje.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _frekwencjaRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +70,28 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Frekwencja>> PostFrekwencja(Frekwencja frekwencja)
         {
-            _context.Frekwencje.Add(frekwencja);
-            await _context.SaveChangesAsync();
+            _frekwencjaRepository.Add(frekwencja);
+            var result = await _frekwencjaRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetFrekwencja", new { id = frekwencja.Id }, frekwencja);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać rekordu.");
+
+            return CreatedAtAction(nameof(GetFrekwencja), new { id = frekwencja.Id }, frekwencja);
         }
 
         // DELETE: api/Frekwencje/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteFrekwencja(int id)
         {
-            var frekwencja = await _context.Frekwencje.FindAsync(id);
+            var frekwencja = await _frekwencjaRepository.GetByIdAsync(id);
             if (frekwencja == null)
-            {
                 return NotFound();
-            }
 
-            _context.Frekwencje.Remove(frekwencja);
-            await _context.SaveChangesAsync();
+            _frekwencjaRepository.Delete(frekwencja);
+            var result = await _frekwencjaRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć rekordu.");
 
             return NoContent();
         }

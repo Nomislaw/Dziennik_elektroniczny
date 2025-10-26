@@ -2,9 +2,8 @@
 
 namespace Dziennik_elektroniczny.Models
 {
-    public class Klasa
+    public class Klasa : BaseEntity
     {
-        public int Id { get; set; }
         public string Nazwa { get; set; }
         public int Rok { get; set; }
 

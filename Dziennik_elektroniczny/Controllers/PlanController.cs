@@ -1,9 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,32 +12,36 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class PlanController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // ZMIANA: z AppDbContext na IGenericRepository<Plan>
+        private readonly IGenericRepository<Plan> _planRepository;
 
-        public PlanController(AppDbContext context)
+        public PlanController(IGenericRepository<Plan> planRepository) // ZMIANA
         {
-            _context = context;
+            _planRepository = planRepository;
         }
 
         // GET: api/Plany
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Plan>>> GetPlany()
         {
-            return await _context.Plany.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var plany = await _planRepository.GetAllAsync();
+            return Ok(plany);
         }
 
         // GET: api/Plany/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Plan>> GetPlan(int id)
         {
-            var plan = await _context.Plany.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var plan = await _planRepository.GetByIdAsync(id);
 
             if (plan == null)
             {
                 return NotFound();
             }
 
-            return plan;
+            return Ok(plan); // ZMIANA: Dodano Ok() dla spójności
         }
 
         // PUT: api/Plany/5
@@ -45,26 +50,15 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != plan.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _context.Entry(plan).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w OcenyController
+            _planRepository.Update(plan);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Plany.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _planRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +67,32 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Plan>> PostPlan(Plan plan)
         {
-            _context.Plany.Add(plan);
-            await _context.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w OcenyController
+            _planRepository.Add(plan);
+            var result = await _planRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetPlan", new { id = plan.Id }, plan);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać planu.");
+
+            return CreatedAtAction(nameof(GetPlan), new { id = plan.Id }, plan);
         }
 
         // DELETE: api/Plany/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePlan(int id)
         {
-            var plan = await _context.Plany.FindAsync(id);
+            // ZMIANA: Logika usuwania jak w OcenyController
+            var plan = await _planRepository.GetByIdAsync(id);
             if (plan == null)
             {
                 return NotFound();
             }
 
-            _context.Plany.Remove(plan);
-            await _context.SaveChangesAsync();
+            _planRepository.Delete(plan);
+            var result = await _planRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć planu.");
 
             return NoContent();
         }

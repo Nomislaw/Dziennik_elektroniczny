@@ -1,9 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,32 +12,36 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class SemestrController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // ZMIANA: z AppDbContext na IGenericRepository<Semestr>
+        private readonly IGenericRepository<Semestr> _semestrRepository;
 
-        public SemestrController(AppDbContext context)
+        public SemestrController(IGenericRepository<Semestr> semestrRepository) // ZMIANA
         {
-            _context = context;
+            _semestrRepository = semestrRepository;
         }
 
         // GET: api/Semestry
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Semestr>>> GetSemestry()
         {
-            return await _context.Semestry.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var semestry = await _semestrRepository.GetAllAsync();
+            return Ok(semestry);
         }
 
         // GET: api/Semestry/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Semestr>> GetSemestr(int id)
         {
-            var semestr = await _context.Semestry.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var semestr = await _semestrRepository.GetByIdAsync(id);
 
             if (semestr == null)
             {
                 return NotFound();
             }
 
-            return semestr;
+            return Ok(semestr); // ZMIANA: Dodano Ok() dla spójności
         }
 
         // PUT: api/Semestry/5
@@ -45,26 +50,15 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != semestr.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _context.Entry(semestr).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w SaleController
+            _semestrRepository.Update(semestr);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Semestry.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _semestrRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +67,33 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Semestr>> PostSemestr(Semestr semestr)
         {
-            _context.Semestry.Add(semestr);
-            await _context.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w SaleController
+            _semestrRepository.Add(semestr);
+            var result = await _semestrRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetSemestr", new { id = semestr.Id }, semestr);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać semestru.");
+
+            // Użycie nameof() jest bezpieczniejsze niż "GetSemestr"
+            return CreatedAtAction(nameof(GetSemestr), new { id = semestr.Id }, semestr);
         }
 
         // DELETE: api/Semestry/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSemestr(int id)
         {
-            var semestr = await _context.Semestry.FindAsync(id);
+            // ZMIANA: Logika usuwania jak w SaleController
+            var semestr = await _semestrRepository.GetByIdAsync(id);
             if (semestr == null)
             {
                 return NotFound();
             }
 
-            _context.Semestry.Remove(semestr);
-            await _context.SaveChangesAsync();
+            _semestrRepository.Delete(semestr);
+            var result = await _semestrRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć semestru.");
 
             return NoContent();
         }

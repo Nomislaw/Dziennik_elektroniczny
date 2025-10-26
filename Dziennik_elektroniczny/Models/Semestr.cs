@@ -2,9 +2,8 @@
 
 namespace Dziennik_elektroniczny.Models
 {
-    public class Semestr
+    public class Semestr : BaseEntity
     {
-        public int Id { get; set; } // Klucz główny
         public DateTime DataRozpoczecia { get; set; }
         public DateTime DataZakonczenia { get; set; }
         public int Numer { get; set; }

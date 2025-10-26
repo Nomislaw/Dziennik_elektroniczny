@@ -1,8 +1,7 @@
 ﻿namespace Dziennik_elektroniczny.Models
 {
-    public class Uzytkownik
+    public class Uzytkownik : BaseEntity
     {
-        public int Id { get; set; }
         public string Imie { get; set; }
         public string Nazwisko { get; set; }
         public string Email { get; set; }

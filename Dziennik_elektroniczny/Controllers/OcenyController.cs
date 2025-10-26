@@ -1,9 +1,6 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,32 +8,31 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class OcenyController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IGenericRepository<Ocena> _ocenaRepository;
 
-        public OcenyController(AppDbContext context)
+        public OcenyController(IGenericRepository<Ocena> ocenaRepository)
         {
-            _context = context;
+            _ocenaRepository = ocenaRepository;
         }
 
         // GET: api/Oceny
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Ocena>>> GetOceny()
         {
-            return await _context.Oceny.ToListAsync();
+            var oceny = await _ocenaRepository.GetAllAsync();
+            return Ok(oceny);
         }
 
         // GET: api/Oceny/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Ocena>> GetOcena(int id)
         {
-            var ocena = await _context.Oceny.FindAsync(id);
+            var ocena = await _ocenaRepository.GetByIdAsync(id);
 
             if (ocena == null)
-            {
                 return NotFound();
-            }
 
-            return ocena;
+            return Ok(ocena);
         }
 
         // PUT: api/Oceny/5
@@ -44,27 +40,13 @@ namespace Dziennik_elektroniczny.Controllers
         public async Task<IActionResult> PutOcena(int id, Ocena ocena)
         {
             if (id != ocena.Id)
-            {
-                return BadRequest();
-            }
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
 
-            _context.Entry(ocena).State = EntityState.Modified;
+            _ocenaRepository.Update(ocena);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Oceny.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _ocenaRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +55,28 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Ocena>> PostOcena(Ocena ocena)
         {
-            _context.Oceny.Add(ocena);
-            await _context.SaveChangesAsync();
+            _ocenaRepository.Add(ocena);
+            var result = await _ocenaRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetOcena", new { id = ocena.Id }, ocena);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać oceny.");
+
+            return CreatedAtAction(nameof(GetOcena), new { id = ocena.Id }, ocena);
         }
 
         // DELETE: api/Oceny/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOcena(int id)
         {
-            var ocena = await _context.Oceny.FindAsync(id);
+            var ocena = await _ocenaRepository.GetByIdAsync(id);
             if (ocena == null)
-            {
                 return NotFound();
-            }
 
-            _context.Oceny.Remove(ocena);
-            await _context.SaveChangesAsync();
+            _ocenaRepository.Delete(ocena);
+            var result = await _ocenaRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć oceny.");
 
             return NoContent();
         }

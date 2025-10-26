@@ -1,9 +1,6 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,95 +8,78 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class KlasaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IGenericRepository<Klasa> _klasaRepository;
 
-        // Konstruktor automatycznie "wstrzykuje" dostęp do bazy danych
-        public KlasaController(AppDbContext context)
+        public KlasaController(IGenericRepository<Klasa> klasaRepository)
         {
-            _context = context;
+            _klasaRepository = klasaRepository;
         }
 
-        // GET: api/Klasy
-        // Pobiera listę wszystkich klas
+        // GET: api/Klasa
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Klasa>>> GetKlasy()
         {
-            return await _context.Klasy.ToListAsync();
+            var klasy = await _klasaRepository.GetAllAsync();
+            return Ok(klasy);
         }
 
-        // GET: api/Klasy/5
-        // Pobiera jedną klasę o konkretnym ID
+        // GET: api/Klasa/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Klasa>> GetKlasa(int id)
         {
-            var klasa = await _context.Klasy.FindAsync(id);
+            var klasa = await _klasaRepository.GetByIdAsync(id);
 
             if (klasa == null)
-            {
                 return NotFound();
-            }
 
-            return klasa;
+            return Ok(klasa);
         }
 
-        // PUT: api/Klasy/5
-        // Aktualizuje klasę o konkretnym ID
+        // PUT: api/Klasa/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutKlasa(int id, Klasa klasa)
         {
             if (id != klasa.Id)
-            {
-                return BadRequest();
-            }
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
 
-            _context.Entry(klasa).State = EntityState.Modified;
+            _klasaRepository.Update(klasa);
+            var result = await _klasaRepository.SaveChangesAsync();
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Klasy.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
 
-        // POST: api/Klasy
-        // Tworzy nową klasę
+        // POST: api/Klasa
         [HttpPost]
         public async Task<ActionResult<Klasa>> PostKlasa(Klasa klasa)
         {
-            _context.Klasy.Add(klasa);
-            await _context.SaveChangesAsync();
+            _klasaRepository.Add(klasa);
+            var result = await _klasaRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetKlasa", new { id = klasa.Id }, klasa);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać klasy.");
+
+            return CreatedAtAction(nameof(GetKlasa), new { id = klasa.Id }, klasa);
         }
 
-        // DELETE: api/Klasy/5
-        // Usuwa klasę o konkretnym ID
+        // DELETE: api/Klasa/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteKlasa(int id)
         {
-            var klasa = await _context.Klasy.FindAsync(id);
-            if (klasa == null)
-            {
-                return NotFound();
-            }
+            var klasa = await _klasaRepository.GetByIdAsync(id);
 
-            _context.Klasy.Remove(klasa);
-            await _context.SaveChangesAsync();
+            if (klasa == null)
+                return NotFound();
+
+            _klasaRepository.Delete(klasa);
+            var result = await _klasaRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć klasy.");
 
             return NoContent();
         }
-    
     }
 }

@@ -1,9 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,26 +12,30 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class UzytkownikController : ControllerBase
     {
-        private readonly AppDbContext _appDbContext;
-        public UzytkownikController(AppDbContext appDbContext)
+        // ZMIANA: z AppDbContext na IGenericRepository<Uzytkownik>
+        private readonly IGenericRepository<Uzytkownik> _uzytkownikRepository;
+        public UzytkownikController(IGenericRepository<Uzytkownik> uzytkownikRepository) // ZMIANA
         {
-            _appDbContext = appDbContext;
+            _uzytkownikRepository = uzytkownikRepository;
         }
 
         // GET: api/<UzytkownikController>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Uzytkownik>>> GetAll()
         {
-            return await _appDbContext.Uzytkownicy.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var uzytkownicy = await _uzytkownikRepository.GetAllAsync();
+            return Ok(uzytkownicy);
         }
 
         // GET api/<UzytkownikController>/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Uzytkownik>> GetById(int id)
         {
-           var user = await _appDbContext.Uzytkownicy.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var user = await _uzytkownikRepository.GetByIdAsync(id);
 
-            if(user == null)
+            if (user == null)
             {
                 return NotFound();
             }
@@ -39,10 +44,16 @@ namespace Dziennik_elektroniczny.Controllers
 
         // POST api/<UzytkownikController>
         [HttpPost]
-        public async void Post([FromBody] Uzytkownik newUser)
+        public async Task<ActionResult<Uzytkownik>> Post([FromBody] Uzytkownik newUser) // ZMIANA: typ zwracany
         {
-            _appDbContext.Uzytkownicy.AddAsync(newUser);
-            await _appDbContext.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w SemestrController
+            _uzytkownikRepository.Add(newUser);
+            var result = await _uzytkownikRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać użytkownika.");
+
+            return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
         }
 
         // PUT api/<UzytkownikController>/5
@@ -51,40 +62,37 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != user.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _appDbContext.Entry(user).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w SemestrController
+            _uzytkownikRepository.Update(user);
 
-            try
-            {
-                await _appDbContext.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_appDbContext.Uzytkownicy.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _uzytkownikRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
 
         // DELETE api/<UzytkownikController>/5
         [HttpDelete("{id}")]
-        public async void Delete(int id)
+        public async Task<IActionResult> Delete(int id) // ZMIANA: typ zwracany
         {
-            var user = await _appDbContext.Uzytkownicy.FindAsync(id);
-            if(user != null)
+            // ZMIANA: Logika usuwania jak w SemestrController
+            var user = await _uzytkownikRepository.GetByIdAsync(id);
+            if (user == null)
             {
-                _appDbContext.Uzytkownicy.Remove(user);
-                await _appDbContext.SaveChangesAsync();
+                return NotFound();
             }
+
+            _uzytkownikRepository.Delete(user);
+            var result = await _uzytkownikRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć użytkownika.");
+
+            return NoContent();
         }
     }
 }

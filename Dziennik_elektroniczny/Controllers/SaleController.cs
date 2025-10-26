@@ -1,9 +1,10 @@
-﻿using Dziennik_elektroniczny.Data;
+﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
+// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
+using System.Collections.Generic; // Dodane dla IEnumerable
+using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,32 +12,36 @@ namespace Dziennik_elektroniczny.Controllers
     [ApiController]
     public class SaleController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // ZMIANA: z AppDbContext na IGenericRepository<Sala>
+        private readonly IGenericRepository<Sala> _salaRepository;
 
-        public SaleController(AppDbContext context)
+        public SaleController(IGenericRepository<Sala> salaRepository) // ZMIANA
         {
-            _context = context;
+            _salaRepository = salaRepository;
         }
 
         // GET: api/Sale
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Sala>>> GetSale()
         {
-            return await _context.Sale.ToListAsync();
+            // ZMIANA: Użycie repozytorium
+            var sale = await _salaRepository.GetAllAsync();
+            return Ok(sale);
         }
 
         // GET: api/Sale/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Sala>> GetSala(int id)
         {
-            var sala = await _context.Sale.FindAsync(id);
+            // ZMIANA: Użycie repozytorium
+            var sala = await _salaRepository.GetByIdAsync(id);
 
             if (sala == null)
             {
                 return NotFound();
             }
 
-            return sala;
+            return Ok(sala); // ZMIANA: Dodano Ok() dla spójności
         }
 
         // PUT: api/Sale/5
@@ -45,26 +50,15 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != sala.Id)
             {
-                return BadRequest();
+                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            _context.Entry(sala).State = EntityState.Modified;
+            // ZMIANA: Logika aktualizacji jak w OcenyController
+            _salaRepository.Update(sala);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Sale.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _salaRepository.SaveChangesAsync();
+            if (!result)
+                return StatusCode(500, "Nie udało się zapisać zmian.");
 
             return NoContent();
         }
@@ -73,24 +67,33 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Sala>> PostSala(Sala sala)
         {
-            _context.Sale.Add(sala);
-            await _context.SaveChangesAsync();
+            // ZMIANA: Logika dodawania jak w OcenyController
+            _salaRepository.Add(sala);
+            var result = await _salaRepository.SaveChangesAsync();
 
-            return CreatedAtAction("GetSala", new { id = sala.Id }, sala);
+            if (!result)
+                return StatusCode(500, "Nie udało się dodać sali.");
+
+            // Użycie nameof() jest bezpieczniejsze niż "GetSala"
+            return CreatedAtAction(nameof(GetSala), new { id = sala.Id }, sala);
         }
 
         // DELETE: api/Sale/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSala(int id)
         {
-            var sala = await _context.Sale.FindAsync(id);
+            // ZMIANA: Logika usuwania jak w OcenyController
+            var sala = await _salaRepository.GetByIdAsync(id);
             if (sala == null)
             {
                 return NotFound();
             }
 
-            _context.Sale.Remove(sala);
-            await _context.SaveChangesAsync();
+            _salaRepository.Delete(sala);
+            var result = await _salaRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się usunąć sali.");
 
             return NoContent();
         }
