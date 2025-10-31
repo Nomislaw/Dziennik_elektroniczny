@@ -1,79 +1,50 @@
-"use client";
-
-import { useState } from "react";
-import { login } from "../api/AuthService"; // import funkcji login z api.ts
-import { Uzytkownik } from "../types/Uzytkownik";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
-export default function Login() {
-  const router = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+interface LoginProps {
+  onLogin: () => void;
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+export default function Login({ onLogin }: LoginProps) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
 
-    try {
-      const user: Uzytkownik = await login(form.email, form.password);
-      localStorage.setItem("user", JSON.stringify(user));
-      console.log("Zalogowano użytkownika:", user);
-  
-      router("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Błąd logowania");
-    } finally {
-      setLoading(false);
-    }
+    // tu w przyszłości dodamy logikę logowania do backendu
+    onLogin();
+    navigate("/home");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-          🔑 Logowanie do Dziennika
-        </h2>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-96">
+        <h2 className="text-2xl font-semibold mb-4 text-center">🔑 Logowanie</h2>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
-          )}
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <input
             type="email"
-            name="email"
-            placeholder="Adres e-mail"
-            value={form.email}
-            onChange={handleChange}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+            placeholder="E-mail"
+            className="border p-2 rounded-lg"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <input
             type="password"
-            name="password"
             placeholder="Hasło"
-            value={form.password}
-            onChange={handleChange}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+            className="border p-2 rounded-lg"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <button
             type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg"
           >
-            {loading ? "Logowanie..." : "Zaloguj się"}
+            Zaloguj się
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Nie masz konta?{" "}
-          <a href="/register" className="text-blue-600 font-medium hover:underline">
-            Zarejestruj się
-          </a>
-        </p>
       </div>
     </div>
   );
