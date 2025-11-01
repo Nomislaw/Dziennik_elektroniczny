@@ -9,6 +9,10 @@
 
         // --- NOWA WŁAŚCIWOŚĆ ---
         public Rola Rola { get; set; }
+        
+        public bool CzyEmailPotwierdzony { get; set; } = false;
+        public string? TokenWeryfikacyjny { get; set; }
+
 
         // --- WŁAŚCIWOŚCI Z 'UCZEN' ---
         public int? KlasaId { get; set; } // Nullable, bo Nauczyciel nie ma klasy

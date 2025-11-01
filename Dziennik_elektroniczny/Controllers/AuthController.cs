@@ -1,9 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Dziennik_elektroniczny.Models;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs;
+using Dziennik_elektroniczny.Models;
+using Dziennik_elektroniczny.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Dziennik_elektroniczny.Controllers;
 
@@ -12,11 +17,15 @@ namespace Dziennik_elektroniczny.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IConfiguration _configuration;
     private readonly PasswordHasher<Uzytkownik> _passwordHasher = new();
+    private readonly EmailService _emailService;
 
-    public AuthController(AppDbContext context)
+    public AuthController(AppDbContext context, IConfiguration configuration, EmailService emailService)
     {
         _context = context;
+        _configuration = configuration;
+        _emailService = emailService;
     }
 
     [HttpPost("login")]
@@ -28,18 +37,25 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
-            return Unauthorized("Niepoprawny e-mail lub hasło");
+            return Unauthorized("Niepoprawny adres e-mail lub hasło.");
 
         var result = _passwordHasher.VerifyHashedPassword(user, user.HasloHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
-            return Unauthorized("Niepoprawny e-mail lub hasło");
+            return Unauthorized("Niepoprawny adres e-mail lub hasło.");
+
+        if (!user.CzyEmailPotwierdzony)
+            return Unauthorized("Twoje konto nie zostało jeszcze potwierdzone. Sprawdź pocztę e-mail.");
+
+        var token = GenerateJwtToken(user);
 
         return Ok(new
         {
             Id = user.Id,
             Email = user.Email,
-            FirstName = user.Imie,
-            LastName = user.Nazwisko
+            Imie = user.Imie,
+            Nazwisko = user.Nazwisko,
+            Token = token,
+            Rola = user.Rola.ToString()
         });
     }
 
@@ -47,57 +63,79 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
         if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+            return BadRequest("Wprowadzono niepoprawne dane.");
 
         if (await _context.Uzytkownicy.AnyAsync(u => u.Email == req.Email))
-            return BadRequest("Ten adres e-mail jest już zarejestrowany");
+            return BadRequest("Podany adres e-mail jest już zarejestrowany.");
 
         var user = new Uzytkownik
         {
             Email = req.Email,
             Imie = req.FirstName,
             Nazwisko = req.LastName,
-            Rola = Rola.Uczen // <-- domyślna rola
+            Rola = Rola.Uczen,
+            TokenWeryfikacyjny = Guid.NewGuid().ToString()
         };
 
-        var passwordHasher = new PasswordHasher<Uzytkownik>();
-        user.HasloHash = passwordHasher.HashPassword(user, req.Password);
+        user.HasloHash = _passwordHasher.HashPassword(user, req.Password);
 
         _context.Uzytkownicy.Add(user);
         await _context.SaveChangesAsync();
 
-        return Ok(new { user.Id, user.Email, Role = user.Rola.ToString() });
+        var verifyUrl = $"http://localhost:3000/verify?token={user.TokenWeryfikacyjny}";
+        var body = $@"
+            <h3>Witaj {user.Imie}!</h3>
+            <p>Dziękujemy za rejestrację w systemie Dziennik Elektroniczny.</p>
+            <p>Kliknij w poniższy link, aby potwierdzić swój adres e-mail:</p>
+            <a href='{verifyUrl}'>Potwierdź adres e-mail</a>";
+
+        await _emailService.SendEmailAsync(user.Email, "Potwierdzenie rejestracji", body);
+
+        return Ok(new { message = "Konto zostało utworzone. Sprawdź skrzynkę e-mail, aby potwierdzić rejestrację." });
     }
 
-}
+    [HttpGet("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return BadRequest(new { message = "Brak tokenu weryfikacyjnego." });
 
-// DTOs
-public class LoginRequest
-{
-    [Required]
-    [EmailAddress(ErrorMessage = "Niepoprawny adres e-mail.")]
-    public string Email { get; set; } = string.Empty;
+        var user = await _context.Uzytkownicy.FirstOrDefaultAsync(u => u.TokenWeryfikacyjny == token);
 
-    [Required]
-    public string Password { get; set; } = string.Empty;
-}
+        if (user == null)
+            return BadRequest(new { message = "Niepoprawny lub wygasły token weryfikacyjny." });
 
-public class RegisterRequest
-{
-    [Required]
-    [MinLength(8, ErrorMessage = "Hasło musi mieć co najmniej 8 znaków.")]
-    [RegularExpression(@"^(?=(?:.*\d){3,})(?=.*[!@#$%^&*(),.?""{}|<>])(?=.*[A-Z]).*$",
-        ErrorMessage = "Hasło musi zawierać co najmniej 3 cyfry, 1 znak specjalny i 1 wielką literę.")]
-    public string Password { get; set; } = "";
+        user.CzyEmailPotwierdzony = true;
+        user.TokenWeryfikacyjny = null;
 
-    [Required]
-    public string FirstName { get; set; } = "";
+        await _context.SaveChangesAsync();
 
-    [Required]
-    public string LastName { get; set; } = "";
+        return Ok(new { message = "Twój adres e-mail został pomyślnie potwierdzony. Możesz się teraz zalogować." });
+    }
 
-    [Required]
-    [EmailAddress(ErrorMessage = "Niepoprawny adres e-mail.")]
-    public string Email { get; set; } = "";
     
+
+    private string GenerateJwtToken(Uzytkownik user)
+    {
+        var jwtSettings = _configuration.GetSection("Jwt");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Rola.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: jwtSettings["Issuer"],
+            audience: jwtSettings["Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }
