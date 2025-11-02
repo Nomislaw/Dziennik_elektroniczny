@@ -1,5 +1,6 @@
 ﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
+using Dziennik_elektroniczny.Services;
 using Microsoft.AspNetCore.Mvc;
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
@@ -13,8 +14,8 @@ namespace Dziennik_elektroniczny.Controllers
     public class UzytkownikController : ControllerBase
     {
         // ZMIANA: z AppDbContext na IGenericRepository<Uzytkownik>
-        private readonly IGenericRepository<Uzytkownik> _uzytkownikRepository;
-        public UzytkownikController(IGenericRepository<Uzytkownik> uzytkownikRepository) // ZMIANA
+        private readonly IUzytkownikService _uzytkownikRepository;
+        public UzytkownikController(IUzytkownikService uzytkownikRepository) // ZMIANA
         {
             _uzytkownikRepository = uzytkownikRepository;
         }
@@ -44,15 +45,10 @@ namespace Dziennik_elektroniczny.Controllers
 
         // POST api/<UzytkownikController>
         [HttpPost]
-        public async Task<ActionResult<Uzytkownik>> Post([FromBody] Uzytkownik newUser) // ZMIANA: typ zwracany
+        public async Task<ActionResult<Uzytkownik>> Post([FromBody] Uzytkownik newUser, [FromQuery] string haslo) // ZMIANA: typ zwracany
         {
-            // ZMIANA: Logika dodawania jak w SemestrController
+            newUser.UstawHaslo(haslo);
             _uzytkownikRepository.Add(newUser);
-            var result = await _uzytkownikRepository.SaveChangesAsync();
-
-            if (!result)
-                return StatusCode(500, "Nie udało się dodać użytkownika.");
-
             return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
         }
 
@@ -65,13 +61,7 @@ namespace Dziennik_elektroniczny.Controllers
                 return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
             }
 
-            // ZMIANA: Logika aktualizacji jak w SemestrController
-            _uzytkownikRepository.Update(user);
-
-            var result = await _uzytkownikRepository.SaveChangesAsync();
-            if (!result)
-                return StatusCode(500, "Nie udało się zapisać zmian.");
-
+            _uzytkownikRepository.Update(user, id);
             return NoContent();
         }
 
@@ -80,19 +70,29 @@ namespace Dziennik_elektroniczny.Controllers
         public async Task<IActionResult> Delete(int id) // ZMIANA: typ zwracany
         {
             // ZMIANA: Logika usuwania jak w SemestrController
-            var user = await _uzytkownikRepository.GetByIdAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            _uzytkownikRepository.Delete(user);
-            var result = await _uzytkownikRepository.SaveChangesAsync();
-
-            if (!result)
-                return StatusCode(500, "Nie udało się usunąć użytkownika.");
-
+            _uzytkownikRepository.Delete(id);
             return NoContent();
+        }
+
+        [HttpPatch("{id}/password")]
+        public async Task<IActionResult> ZmienHaslo(int id, [FromQuery] string stareHaslo, [FromQuery] string noweHaslo)
+        {
+            var (success, message) = await _uzytkownikRepository.ZmienHasloAsync(id, stareHaslo, noweHaslo);
+            if (!success)
+                return BadRequest(message);
+
+            return Ok("Hasło zostało zmienione.");
+        }
+
+        //PATCH: api/uzytkownik/{id}/dane?imie=Jan&nazwisko=Nowak
+        [HttpPatch("{id}/data")]
+        public async Task<IActionResult> ZmienDane(int id, [FromQuery] string? imie, [FromQuery] string? nazwisko)
+        {
+            var (success, message) = await _uzytkownikRepository.ZmienDaneAsync(id, imie, nazwisko);
+            if (!success)
+                return BadRequest(message);
+
+            return Ok("Dane użytkownika zostały zaktualizowane.");
         }
     }
 }

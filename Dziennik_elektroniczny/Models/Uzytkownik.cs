@@ -1,4 +1,6 @@
-﻿namespace Dziennik_elektroniczny.Models
+﻿using Microsoft.AspNetCore.Identity;
+
+namespace Dziennik_elektroniczny.Models
 {
     public class Uzytkownik : BaseEntity
     {
@@ -45,5 +47,18 @@
 
         // Rodzice tego Użytkownika (jako Ucznia)
         public virtual ICollection<Uzytkownik> Rodzice { get; set; } = new List<Uzytkownik>();
+
+        public void UstawHaslo(string haslo)
+        {
+            var hasher = new PasswordHasher<Uzytkownik>();
+            HasloHash = hasher.HashPassword(this, haslo);
+        }
+
+        public bool SprawdzHaslo(string haslo)
+        {
+            var hasher = new PasswordHasher<Uzytkownik>();
+            var result = hasher.VerifyHashedPassword(this, HasloHash, haslo);
+            return result == PasswordVerificationResult.Success;
+        }
     }
 }
