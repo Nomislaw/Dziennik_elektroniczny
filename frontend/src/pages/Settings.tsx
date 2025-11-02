@@ -1,10 +1,16 @@
 // src/pages/Settings.tsx
 import { useState } from "react";
 import { zmienHaslo, zmienDane, zmienEmail } from "../api/userApi";
+import { useNavigate } from "react-router-dom";
+
+
 
 export default function Settings() {
+    const navigate = useNavigate();
   const [form, setForm] = useState({ stareHaslo: "", noweHaslo: "", imie: "", nazwisko: "", email: "" });
   const [msg, setMsg] = useState("");
+
+  const [activeSection, setActiveSection] = useState<"dane" | "email" | "haslo" | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,39 +29,65 @@ export default function Settings() {
 
   return (
     <div className="p-6 bg-blue-50 min-h-screen">
+        <button
+  onClick={() => navigate("/dashboard")}
+  className="mb-4 px-4 py-2 bg-blue-500 text-white font-semibold rounded-full hover:bg-blue-600 transition-colors duration-200"
+>
+  ← Powrót do strony głównej
+</button>
+
       <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
 
       {msg && <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>}
 
-      {/* Zmiana danych */}
-      <section className="bg-white p-4 rounded-2xl shadow mb-6">
-        <h2 className="font-semibold mb-2">🧑 Dane osobowe</h2>
-        <input name="imie" placeholder="Imię" value={form.imie} onChange={handleChange} className="p-2 border rounded mr-2" />
-        <input name="nazwisko" placeholder="Nazwisko" value={form.nazwisko} onChange={handleChange} className="p-2 border rounded mr-2" />
-        <button onClick={() => handleSubmit("dane")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          Zapisz
-        </button>
-      </section>
+        <div className="mb-4 space-x-2">
+  <button onClick={() => setActiveSection("dane")} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+    🧑 Zmień dane osobowe
+  </button>
+  <button onClick={() => setActiveSection("email")} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+    📧 Zmień e-mail
+  </button>
+  <button onClick={() => setActiveSection("haslo")} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+    🔒 Zmień hasło
+  </button>
+</div>
 
-      {/* Zmiana e-maila */}
-      <section className="bg-white p-4 rounded-2xl shadow mb-6">
-        <h2 className="font-semibold mb-2">📧 Adres e-mail</h2>
-        <input name="email" placeholder="Nowy e-mail" value={form.email} onChange={handleChange} className="p-2 border rounded mr-2" />
-        <button onClick={() => handleSubmit("email")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          Zapisz
-        </button>
-      </section>
+{activeSection === "dane" && (
+  <section className="bg-white p-4 rounded-2xl shadow mb-6">
+    <h2 className="font-semibold mb-2">🧑 Dane osobowe</h2>
+    <input name="imie" placeholder="Imię" value={form.imie} onChange={handleChange} className="p-2 border rounded mr-2" />
+    <input name="nazwisko" placeholder="Nazwisko" value={form.nazwisko} onChange={handleChange} className="p-2 border rounded mr-2" />
+    <button onClick={() => handleSubmit("dane")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+      Zapisz
+    </button>
+  </section>
+)}
 
-      {/* Zmiana hasła */}
-      <section className="bg-white p-4 rounded-2xl shadow">
-        <h2 className="font-semibold mb-2">🔒 Zmiana hasła</h2>
-        <input type="password" name="stareHaslo" placeholder="Stare hasło" value={form.stareHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
-        <input type="password" name="noweHaslo" placeholder="Nowe hasło" value={form.noweHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
-        <button onClick={() => handleSubmit("haslo")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          Zapisz
-        </button>
-      </section>
+{activeSection === "email" && (
+  <section className="bg-white p-4 rounded-2xl shadow mb-6">
+    <h2 className="font-semibold mb-2">📧 Adres e-mail</h2>
+    <input name="email" placeholder="Nowy e-mail" value={form.email} onChange={handleChange} className="p-2 border rounded mr-2" />
+    <button onClick={() => handleSubmit("email")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+      Zapisz
+    </button>
+  </section>
+)}
+
+{activeSection === "haslo" && (
+  <section className="bg-white p-4 rounded-2xl shadow">
+    <h2 className="font-semibold mb-2">🔒 Zmiana hasła</h2>
+    <input type="password" name="stareHaslo" placeholder="Stare hasło" value={form.stareHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
+    <input type="password" name="noweHaslo" placeholder="Nowe hasło" value={form.noweHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
+    <button onClick={() => handleSubmit("haslo")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+      Zapisz
+    </button>
+  </section>
+)}
+
+
+      
     </div>
+    
   );
 }
 export {};

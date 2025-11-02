@@ -7,9 +7,10 @@ import Settings from "./pages/Settings";
 
 function Navigation() {
   const location = useLocation();
+  const userData = localStorage.getItem("user");
 
-  if (location.pathname.startsWith("/dashboard")) {
-    return null;
+  if (userData || location.pathname.startsWith("/dashboard") || location.pathname === "/settings") {
+    return null; // ukryj pasek jeśli zalogowany lub na dashboard/settings
   }
 
   return (
@@ -26,6 +27,7 @@ export default function App() {
       <Navigation />
 
       <Routes>
+              
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard children/>} />

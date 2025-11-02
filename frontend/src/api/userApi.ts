@@ -1,13 +1,14 @@
 // src/api/userApi.ts
-const API_URL = "http://localhost:7292/api/uzytkownik/"; // dopasuj port backendu
+const API_URL = "https://localhost:7292/api/uzytkownik/"; // dopasuj port backendu
 
 // 🧱 Pomocnicza funkcja do PATCH
 async function patch(url: string, params: Record<string, string>) {
   const query = new URLSearchParams(params).toString();
+  const token = localStorage.getItem("token");
   const response = await fetch(`${API_URL}/${url}?${query}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include", // jeśli używacie cookie z JWT
+    headers: { "Content-Type": "application/json","Authorization": `Bearer ${token}` },
+    mode:"cors",
   });
   if (!response.ok) {
     throw new Error(await response.text());
