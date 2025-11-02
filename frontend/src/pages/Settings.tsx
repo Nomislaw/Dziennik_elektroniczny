@@ -1,0 +1,61 @@
+// src/pages/Settings.tsx
+import { useState } from "react";
+import { zmienHaslo, zmienDane, zmienEmail } from "../api/userApi";
+
+export default function Settings() {
+  const [form, setForm] = useState({ stareHaslo: "", noweHaslo: "", imie: "", nazwisko: "", email: "" });
+  const [msg, setMsg] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (type: "haslo" | "dane" | "email") => {
+    try {
+      if (type === "haslo") await zmienHaslo(form.stareHaslo, form.noweHaslo);
+      if (type === "dane") await zmienDane(form.imie, form.nazwisko);
+      if (type === "email") await zmienEmail(form.email);
+      setMsg("✅ Zmiana zakończona sukcesem!");
+    } catch (err: any) {
+      setMsg("❌ Błąd: " + err.message);
+    }
+  };
+
+  return (
+    <div className="p-6 bg-blue-50 min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
+
+      {msg && <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>}
+
+      {/* Zmiana danych */}
+      <section className="bg-white p-4 rounded-2xl shadow mb-6">
+        <h2 className="font-semibold mb-2">🧑 Dane osobowe</h2>
+        <input name="imie" placeholder="Imię" value={form.imie} onChange={handleChange} className="p-2 border rounded mr-2" />
+        <input name="nazwisko" placeholder="Nazwisko" value={form.nazwisko} onChange={handleChange} className="p-2 border rounded mr-2" />
+        <button onClick={() => handleSubmit("dane")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Zapisz
+        </button>
+      </section>
+
+      {/* Zmiana e-maila */}
+      <section className="bg-white p-4 rounded-2xl shadow mb-6">
+        <h2 className="font-semibold mb-2">📧 Adres e-mail</h2>
+        <input name="email" placeholder="Nowy e-mail" value={form.email} onChange={handleChange} className="p-2 border rounded mr-2" />
+        <button onClick={() => handleSubmit("email")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Zapisz
+        </button>
+      </section>
+
+      {/* Zmiana hasła */}
+      <section className="bg-white p-4 rounded-2xl shadow">
+        <h2 className="font-semibold mb-2">🔒 Zmiana hasła</h2>
+        <input type="password" name="stareHaslo" placeholder="Stare hasło" value={form.stareHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
+        <input type="password" name="noweHaslo" placeholder="Nowe hasło" value={form.noweHaslo} onChange={handleChange} className="p-2 border rounded mr-2" />
+        <button onClick={() => handleSubmit("haslo")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Zapisz
+        </button>
+      </section>
+    </div>
+  );
+}
+export {};

@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom"; // Outlet bardzo ważny
 import { Uzytkownik } from "../types/Uzytkownik";
+
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -52,9 +53,11 @@ export default function Dashboard({ children }: DashboardLayoutProps) {
           <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
             ✉️ Wiadomości
           </button>
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
+          <Link
+           to="/settings"
+              className="block w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
             ⚙️ Ustawienia
-          </button>
+          </Link>
         </nav>
         <div className="p-4 border-t border-blue-600">
           <button
@@ -80,7 +83,10 @@ export default function Dashboard({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Page content */}
-        <div className="p-6 overflow-y-auto">{children}</div>
+       <div className="p-6 overflow-y-auto">
+        <Outlet /> {/* Tutaj wczytują się podstrony jak Settings */}
+         {children}
+        </div>
       </main>
     </div>
   );

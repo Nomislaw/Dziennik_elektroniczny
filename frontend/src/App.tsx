@@ -3,6 +3,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./layouts/Dashboard";
 import VerifyEmail from "./components/VerifyEmail";
+import Settings from "./pages/Settings";
 
 function Navigation() {
   const location = useLocation();
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard children/>} />
         <Route path="/verify" element={<VerifyEmail  />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Router>
   );
