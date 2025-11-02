@@ -99,5 +99,22 @@ namespace Dziennik_elektroniczny.Services
             var result = await _uzytkownikRepository.SaveChangesAsync();
             return result ? (true, null) : (false, "Nie udało się zmienić hasła.");
         }
+
+        public async Task<(bool success, string? message)> ZmienEmailAsync(int id, string nowyEmail)
+        {
+            if (string.IsNullOrWhiteSpace(nowyEmail))
+                return (false, "Email nie może być pusty.");
+
+            var user = await _uzytkownikRepository.GetByIdAsync(id);
+            if (user == null)
+                return (false, "Nie znaleziono użytkownika.");
+
+            user.Email = nowyEmail;
+
+            _uzytkownikRepository.Update(user);
+            var saved = await _uzytkownikRepository.SaveChangesAsync();
+
+            return saved ? (true, null) : (false, "Nie udało się zaktualizować emaila.");
+        }
     }
 }

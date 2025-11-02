@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
 using System.Collections.Generic; // Dodane dla IEnumerable
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
@@ -74,10 +75,11 @@ namespace Dziennik_elektroniczny.Controllers
             return NoContent();
         }
 
-        [HttpPatch("{id}/password")]
-        public async Task<IActionResult> ZmienHaslo(int id, [FromQuery] string stareHaslo, [FromQuery] string noweHaslo)
+        [HttpPatch("password")]
+        public async Task<IActionResult> ZmienHaslo([FromQuery] string stareHaslo, [FromQuery] string noweHaslo)
         {
-            var (success, message) = await _uzytkownikRepository.ZmienHasloAsync(id, stareHaslo, noweHaslo);
+            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+            var (success, message) = await _uzytkownikRepository.ZmienHasloAsync(userId, stareHaslo, noweHaslo);
             if (!success)
                 return BadRequest(message);
 
@@ -85,14 +87,26 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         //PATCH: api/uzytkownik/{id}/dane?imie=Jan&nazwisko=Nowak
-        [HttpPatch("{id}/data")]
-        public async Task<IActionResult> ZmienDane(int id, [FromQuery] string? imie, [FromQuery] string? nazwisko)
+        [HttpPatch("data")]
+        public async Task<IActionResult> ZmienDane([FromQuery] string? imie, [FromQuery] string? nazwisko)
         {
-            var (success, message) = await _uzytkownikRepository.ZmienDaneAsync(id, imie, nazwisko);
+            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+            var (success, message) = await _uzytkownikRepository.ZmienDaneAsync(userId, imie, nazwisko);
             if (!success)
                 return BadRequest(message);
 
             return Ok("Dane użytkownika zostały zaktualizowane.");
+        }
+
+        [HttpPatch("email")]
+        public async Task<IActionResult> ZmienEmail([FromQuery] string nowyEmail)
+        {
+            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+
+            var (success, message) = await _uzytkownikRepository.ZmienEmailAsync(userId, nowyEmail);
+            if (!success) return BadRequest(message);
+
+            return Ok("Email użytkownika został zaktualizowany.");
         }
     }
 }
