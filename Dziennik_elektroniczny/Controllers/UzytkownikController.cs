@@ -1,11 +1,13 @@
 ﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Dziennik_elektroniczny.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
 using System.Collections.Generic; // Dodane dla IEnumerable
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Threading.Tasks; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
@@ -74,11 +76,15 @@ namespace Dziennik_elektroniczny.Controllers
             _uzytkownikRepository.Delete(id);
             return NoContent();
         }
-
+        [Authorize]
         [HttpPatch("password")]
         public async Task<IActionResult> ZmienHaslo([FromQuery] string stareHaslo, [FromQuery] string noweHaslo)
         {
-            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Nieprawidłowy token JWT.");
+
+            int userId = int.Parse(userIdClaim);
             var (success, message) = await _uzytkownikRepository.ZmienHasloAsync(userId, stareHaslo, noweHaslo);
             if (!success)
                 return BadRequest(message);
@@ -87,21 +93,31 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         //PATCH: api/uzytkownik/{id}/dane?imie=Jan&nazwisko=Nowak
+        [Authorize]
         [HttpPatch("data")]
         public async Task<IActionResult> ZmienDane([FromQuery] string? imie, [FromQuery] string? nazwisko)
         {
-            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Nieprawidłowy token JWT.");
+
+            int userId = int.Parse(userIdClaim);
+
             var (success, message) = await _uzytkownikRepository.ZmienDaneAsync(userId, imie, nazwisko);
             if (!success)
                 return BadRequest(message);
 
             return Ok("Dane użytkownika zostały zaktualizowane.");
         }
-
+        [Authorize]
         [HttpPatch("email")]
         public async Task<IActionResult> ZmienEmail([FromQuery] string nowyEmail)
         {
-            int userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Nieprawidłowy token JWT.");
+
+            int userId = int.Parse(userIdClaim);
 
             var (success, message) = await _uzytkownikRepository.ZmienEmailAsync(userId, nowyEmail);
             if (!success) return BadRequest(message);

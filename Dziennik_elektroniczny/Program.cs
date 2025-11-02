@@ -1,3 +1,4 @@
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Dziennik_elektroniczny.Data;
 using Dziennik_elektroniczny.DTOs;
@@ -25,7 +26,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000") 
+            policy.WithOrigins("http://localhost:3000")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
@@ -47,6 +48,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
             ValidateLifetime = true,
+            NameClaimType = JwtRegisteredClaimNames.Sub,
             RoleClaimType = System.Security.Claims.ClaimTypes.Role 
         };
 
@@ -56,6 +58,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             OnAuthenticationFailed = context =>
             {
                 Console.WriteLine("JWT auth failed: " + context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                // Tu dodajesz debug, żeby zobaczyć claimy
+                var claims = context.Principal.Claims.Select(c => new { c.Type, c.Value });
+                Console.WriteLine("Claims w tokenie:");
+                foreach (var c in claims) Console.WriteLine($"{c.Type}: {c.Value}");
                 return Task.CompletedTask;
             }
         };
