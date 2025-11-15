@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic; // Dodane dla IEnumerable
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Threading.Tasks; // Dodane dla Task
+using System.Threading.Tasks;
+using Dziennik_elektroniczny.Data; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -18,9 +19,13 @@ namespace Dziennik_elektroniczny.Controllers
     {
         // ZMIANA: z AppDbContext na IGenericRepository<Uzytkownik>
         private readonly IUzytkownikService _uzytkownikRepository;
-        public UzytkownikController(IUzytkownikService uzytkownikRepository) // ZMIANA
+        private readonly EmailService _emailService;
+        private readonly AppDbContext _dbContext;
+        public UzytkownikController(IUzytkownikService uzytkownikRepository, EmailService emailService, AppDbContext dbcontext) // ZMIANA
         {
             _uzytkownikRepository = uzytkownikRepository;
+            _emailService = emailService;
+            _dbContext = dbcontext;
         }
 
         // GET: api/<UzytkownikController>
@@ -123,6 +128,28 @@ namespace Dziennik_elektroniczny.Controllers
             if (!success) return BadRequest(message);
 
             return Ok("Email użytkownika został zaktualizowany.");
+        }
+        
+        [HttpPost("{id}/link-aktywacyjny")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> WyslijTokenWeryfikacyjny(int id)
+        {
+            var user = await _uzytkownikRepository.GetByIdAsync(id);
+            if (user == null) return null;
+            if (user.CzyEmailPotwierdzony) return BadRequest("Użytkownik już zweryfikował e-mail");
+    
+            user.TokenWeryfikacyjny = Guid.NewGuid().ToString();
+            await _dbContext.SaveChangesAsync();
+
+            var verifyUrl = $"http://localhost:3000/verify?token={user.TokenWeryfikacyjny}";
+            var body = $@"
+            <h3>Witaj {user.Imie}!</h3>
+            <p>Dziękujemy za rejestrację w systemie Dziennik Elektroniczny.</p>
+            <p>Kliknij w poniższy link, aby potwierdzić swój adres e-mail:</p>
+            <a href='{verifyUrl}'>Potwierdź adres e-mail</a>";
+            await _emailService.SendEmailAsync(user.Email, "Weryfikacja konta", body);
+
+            return Ok(new { message = "Token weryfikacyjny został pomyślnie wysłany." });
         }
     }
 }
