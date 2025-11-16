@@ -11,19 +11,19 @@ namespace Dziennik_elektroniczny.Services
             _uzytkownikRepository = uzytkownikRepository;
         }
 
-        public void Add(Uzytkownik user)
+        public async Task Add(Uzytkownik user)
         {
             _uzytkownikRepository.Add(user);
-            _uzytkownikRepository.SaveChangesAsync();
+            await _uzytkownikRepository.SaveChangesAsync();
         }
 
-        public void Delete(int id)
+        public async Task Delete(int id)
         {
             var user = _uzytkownikRepository.GetByIdAsync(id).Result;
             if (user != null)
             {
                 _uzytkownikRepository.Delete(user);
-                _uzytkownikRepository.SaveChangesAsync();
+                await _uzytkownikRepository.SaveChangesAsync();
             }
         }
 
@@ -52,14 +52,14 @@ namespace Dziennik_elektroniczny.Services
             return await _uzytkownikRepository.GetByIdAsync(id);
         }
 
-        public void Update(Uzytkownik user, int id)
+        public async Task Update(Uzytkownik user, int id)
         {
             if (user.Id != id)
             {
                 throw new ArgumentException("ID użytkownika nie zgadza się z podanym ID.");
             }
             _uzytkownikRepository.Update(user);
-            _uzytkownikRepository.SaveChangesAsync();
+            await _uzytkownikRepository.SaveChangesAsync();
         }
 
         public async Task<(bool success, string? message)> ZmienDaneAsync(int id, string? imie, string? nazwisko)

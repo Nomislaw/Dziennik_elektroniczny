@@ -30,17 +30,45 @@ namespace Dziennik_elektroniczny.Repository
 
         public async Task<IReadOnlyList<T>> GetAllAsync()
         {
-            return await _dbContext.Set<T>().ToListAsync();
+            try
+            {
+                return await _dbContext.Set<T>()
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error in GetAllAsync for {typeof(T).Name}: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<T?> GetByIdAsync(int id)
         {
-            return await _dbContext.Set<T>().FindAsync(id);
+            try
+            {
+                return await _dbContext.Set<T>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.Id == id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error in GetByIdAsync for {typeof(T).Name}: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<bool> SaveChangesAsync()
         {
-            return await _dbContext.SaveChangesAsync() > 0;
+            try
+            {
+                return await _dbContext.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error in SaveChangesAsync: {ex.Message}");
+                throw;
+            }
         }
 
         public void Update(T entity)

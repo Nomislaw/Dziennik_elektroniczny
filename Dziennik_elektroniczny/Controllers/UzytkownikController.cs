@@ -11,7 +11,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Dziennik_elektroniczny.Data;
 using Dziennik_elektroniczny.DTOs;
-using Microsoft.EntityFrameworkCore; // Dodane dla Task
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -29,7 +30,24 @@ namespace Dziennik_elektroniczny.Controllers
             _emailService = emailService;
             _dbContext = dbcontext;
         }
+        [HttpGet("generate-hash")]
+        [AllowAnonymous] // TYLKO DO TESTÓW! Usuń po użyciu!
+        public ActionResult<object> GenerateHash([FromQuery] string password)
+        {
+            if (string.IsNullOrEmpty(password))
+                return BadRequest("Podaj hasło w parametrze ?password=...");
 
+            var tempUser = new Uzytkownik();
+            var hasher = new PasswordHasher<Uzytkownik>();
+            var hash = hasher.HashPassword(tempUser, password);
+
+            return Ok(new
+            {
+                password = password,
+                hash = hash,
+                info = "Skopiuj wartość 'hash' do SQL"
+            });
+        }
         // GET: api/<UzytkownikController>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Uzytkownik>>> GetAll()
@@ -153,7 +171,7 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(new { message = "Token weryfikacyjny został pomyślnie wysłany." });
         }
-
+        
         [HttpPost("{id}/rola")]
         [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> ZmienRole(int id, [FromQuery] Rola nowaRola)
@@ -196,8 +214,17 @@ namespace Dziennik_elektroniczny.Controllers
                 nowyUzytkownik.Rodzice = rodzice;
             }
 
-            _uzytkownikRepository.Add(nowyUzytkownik);
-            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+            await _uzytkownikRepository.Add(nowyUzytkownik);
+
+            return Ok(new
+            {
+                id = nowyUzytkownik.Id,
+                imie = nowyUzytkownik.Imie,
+                nazwisko = nowyUzytkownik.Nazwisko,
+                email = nowyUzytkownik.Email,
+                rola = nowyUzytkownik.Rola.ToString(),
+                klasaId = nowyUzytkownik.KlasaId
+            });
         }
 
         // POST api/uzytkownik/nauczyciel
@@ -231,8 +258,16 @@ namespace Dziennik_elektroniczny.Controllers
                 nowyUzytkownik.Wychowawstwo = klasa;
             }
 
-            _uzytkownikRepository.Add(nowyUzytkownik);
-            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+            await _uzytkownikRepository.Add(nowyUzytkownik);
+            return Ok(new
+            {
+                id = nowyUzytkownik.Id,
+                imie = nowyUzytkownik.Imie,
+                nazwisko = nowyUzytkownik.Nazwisko,
+                email = nowyUzytkownik.Email,
+                rola = nowyUzytkownik.Rola.ToString(),
+                wychowawstwoKlasaId = dto.WychowawstwoKlasaId
+            });
         }
 
         // POST api/uzytkownik/rodzic
@@ -263,8 +298,16 @@ namespace Dziennik_elektroniczny.Controllers
 
             nowyUzytkownik.Dzieci = dzieci;
 
-            _uzytkownikRepository.Add(nowyUzytkownik);
-            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+            await _uzytkownikRepository.Add(nowyUzytkownik);
+            return Ok(new
+            {
+                id = nowyUzytkownik.Id,
+                imie = nowyUzytkownik.Imie,
+                nazwisko = nowyUzytkownik.Nazwisko,
+                email = nowyUzytkownik.Email,
+                rola = "Rodzic",
+                liczbaDzieci = dzieci.Count
+            });
         }
         // GET: api/uzytkownik/uczniowie
         [HttpGet("uczniowie")]
