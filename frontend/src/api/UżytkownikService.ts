@@ -41,3 +41,17 @@ export function wyslijPonownyToken(email: string) {
     body: JSON.stringify({ email }),
   });
 }
+
+export function edytujUzytkownika(id: string, dane: {
+  imie: string;
+  nazwisko: string;
+  email: string;
+  rola: "Uczen" | "Nauczyciel" | "Rodzic" | "Administrator";
+}) {
+  return fetchAPI(`${BASE}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ user: dane }), // <-- opakowanie w "user"
+  });
+}
+
+

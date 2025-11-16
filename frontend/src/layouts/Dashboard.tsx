@@ -1,11 +1,12 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Outlet, useNavigate, Link } from "react-router-dom"; // Outlet bardzo ważny
+import { Outlet, useNavigate } from "react-router-dom"; // Outlet bardzo ważny
 import { Uzytkownik } from "../types/Uzytkownik";
 
 
 interface DashboardLayoutProps {
-  children: ReactNode;
+  children?: React.ReactNode; // zmiana z required na optional
 }
+
 
 
 export default function Dashboard({ children }: DashboardLayoutProps) {
@@ -14,14 +15,17 @@ export default function Dashboard({ children }: DashboardLayoutProps) {
 
   // Pobranie danych użytkownika po zalogowaniu
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else {
-      // jeśli nie ma użytkownika, przekieruj na login
-      navigate("/login");
-    }
-  }, [navigate]);
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    const parsed = JSON.parse(userData);
+    setUser(parsed);
+
+    
+  } else {
+    navigate("/login");
+  }
+}, [navigate]);
+
 
   // Obsługa wylogowania
   const handleLogout = () => {
@@ -53,11 +57,12 @@ export default function Dashboard({ children }: DashboardLayoutProps) {
           <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
             ✉️ Wiadomości
           </button>
-          <Link
-           to="/settings"
-              className="block w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
-            ⚙️ Ustawienia
-          </Link>
+          <button
+          onClick={() => navigate("/settings")}
+          className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600"
+          >
+          ⚙️ Ustawienia
+        </button>
         </nav>
         <div className="p-4 border-t border-blue-600">
           <button
