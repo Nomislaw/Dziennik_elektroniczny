@@ -129,7 +129,7 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok("Email użytkownika został zaktualizowany.");
         }
-        
+
         [HttpPost("{id}/link-aktywacyjny")]
         [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<Uzytkownik>> WyslijTokenWeryfikacyjny(int id)
@@ -137,7 +137,7 @@ namespace Dziennik_elektroniczny.Controllers
             var user = await _uzytkownikRepository.GetByIdAsync(id);
             if (user == null) return null;
             if (user.CzyEmailPotwierdzony) return BadRequest("Użytkownik już zweryfikował e-mail");
-    
+
             user.TokenWeryfikacyjny = Guid.NewGuid().ToString();
             await _dbContext.SaveChangesAsync();
 
@@ -150,6 +150,24 @@ namespace Dziennik_elektroniczny.Controllers
             await _emailService.SendEmailAsync(user.Email, "Weryfikacja konta", body);
 
             return Ok(new { message = "Token weryfikacyjny został pomyślnie wysłany." });
+        }
+
+        [HttpPost("{id}/rola")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> ZmienRole(int id, [FromQuery] Rola nowaRola)
+        {
+            //Sprawdzamy czy administrator nie probuje zmienic swojej wlasnej roli
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.Parse(userIdClaim) == id)
+            {
+                return BadRequest("Nie możesz zmienić sowjej własnej roli");
+            }
+            var (success, message) = await _uzytkownikRepository.ZmienRoleAsync(id, nowaRola);
+            if (!success)
+            {
+                return BadRequest(message);
+            }
+            return Ok($"Rola użytkownika została zmieniona na {nowaRola}.");
         }
     }
 }

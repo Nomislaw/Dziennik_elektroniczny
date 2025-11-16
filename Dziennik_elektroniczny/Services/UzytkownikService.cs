@@ -116,5 +116,18 @@ namespace Dziennik_elektroniczny.Services
 
             return saved ? (true, null) : (false, "Nie udało się zaktualizować emaila.");
         }
+
+        public async Task<(bool success, string? message)> ZmienRoleAsync(int userId, Rola nowaRola)
+        {
+            var user = await _uzytkownikRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "Nie znaleziono użytkownika.");
+            }
+            user.Rola = nowaRola;
+            _uzytkownikRepository.Update(user);
+            var saved = await _uzytkownikRepository.SaveChangesAsync();
+            return saved ? (true, null) : (false, "Nie udało się zaktualizować roli użytkownika");
+        }
     }
 }

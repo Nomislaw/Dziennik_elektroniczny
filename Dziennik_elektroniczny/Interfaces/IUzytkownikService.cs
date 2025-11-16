@@ -13,5 +13,6 @@ namespace Dziennik_elektroniczny.Interfaces
         Task<(bool success, string? message)> ZmienDaneAsync(int id, string? imie, string? nazwisko);
         Task<(bool success, string? message)> ZmienEmailAsync(int id, string nowyEmail);
         Task<Uzytkownik?> PobierzUzytkownikaAsync(int id);
+        Task<(bool success, string? message)> ZmienRoleAsync(int userId, Rola nowaRola);
     }
 }
