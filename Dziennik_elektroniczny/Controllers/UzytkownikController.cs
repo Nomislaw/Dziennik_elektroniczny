@@ -9,7 +9,9 @@ using System.Collections.Generic; // Dodane dla IEnumerable
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Dziennik_elektroniczny.Data; // Dodane dla Task
+using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs;
+using Microsoft.EntityFrameworkCore; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -169,5 +171,119 @@ namespace Dziennik_elektroniczny.Controllers
             }
             return Ok($"Rola użytkownika została zmieniona na {nowaRola}.");
         }
+        // POST api/uzytkownik/uczen
+        [HttpPost("uczen")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> DodajUcznia([FromBody] DodajUczenDto dto)
+        {
+            var nowyUzytkownik = new Uzytkownik
+            {
+                Imie = dto.Imie,
+                Nazwisko = dto.Nazwisko,
+                Email = dto.Email,
+                Rola = Rola.Uczen,
+                KlasaId = dto.KlasaId
+            };
+
+            nowyUzytkownik.UstawHaslo(dto.Haslo);
+
+            // Jeśli podano rodziców, przypisz ich
+            if (dto.RodziceIds != null && dto.RodziceIds.Any())
+            {
+                var rodzice = await _dbContext.Uzytkownicy
+                    .Where(u => dto.RodziceIds.Contains(u.Id) && u.Rola == Rola.Rodzic)
+                    .ToListAsync();
+                nowyUzytkownik.Rodzice = rodzice;
+            }
+
+            _uzytkownikRepository.Add(nowyUzytkownik);
+            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+        }
+
+        // POST api/uzytkownik/nauczyciel
+        [HttpPost("nauczyciel")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> DodajNauczyciela([FromBody] DodajNauczycielaDto dto)
+        {
+            var nowyUzytkownik = new Uzytkownik
+            {
+                Imie = dto.Imie,
+                Nazwisko = dto.Nazwisko,
+                Email = dto.Email,
+                Rola = Rola.Nauczyciel
+            };
+
+            nowyUzytkownik.UstawHaslo(dto.Haslo);
+
+            // Jeśli nauczyciel ma być wychowawcą, sprawdź czy klasa istnieje
+            if (dto.WychowawstwoKlasaId.HasValue)
+            {
+                var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
+                if (klasa == null)
+                    return BadRequest("Podana klasa nie istnieje.");
+
+                // Sprawdź czy klasa nie ma już wychowawcy
+                var istniejacyWychowawca = await _dbContext.Uzytkownicy
+                    .AnyAsync(u => u.Wychowawstwo.Id == dto.WychowawstwoKlasaId.Value);
+                if (istniejacyWychowawca)
+                    return BadRequest("Ta klasa ma już przypisanego wychowawcę.");
+
+                nowyUzytkownik.Wychowawstwo = klasa;
+            }
+
+            _uzytkownikRepository.Add(nowyUzytkownik);
+            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+        }
+
+        // POST api/uzytkownik/rodzic
+        [HttpPost("rodzic")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> DodajRodzica([FromBody] DodajRodzicaDto dto)
+        {
+            if (dto.DzieciIds == null || !dto.DzieciIds.Any())
+                return BadRequest("Rodzic musi mieć przypisane co najmniej jedno dziecko.");
+
+            var nowyUzytkownik = new Uzytkownik
+            {
+                Imie = dto.Imie,
+                Nazwisko = dto.Nazwisko,
+                Email = dto.Email,
+                Rola = Rola.Rodzic
+            };
+
+            nowyUzytkownik.UstawHaslo(dto.Haslo);
+
+            // Pobierz dzieci (tylko uczniów)
+            var dzieci = await _dbContext.Uzytkownicy
+                .Where(u => dto.DzieciIds.Contains(u.Id) && u.Rola == Rola.Uczen)
+                .ToListAsync();
+
+            if (dzieci.Count != dto.DzieciIds.Count)
+                return BadRequest("Niektóre z podanych ID nie należą do uczniów.");
+
+            nowyUzytkownik.Dzieci = dzieci;
+
+            _uzytkownikRepository.Add(nowyUzytkownik);
+            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+        }
+
+        // POST api/uzytkownik/administrator
+        //[HttpPost("administrator")]
+        //[Authorize(Roles = "Administrator")]
+        //public async Task<ActionResult<Uzytkownik>> DodajAdministratora([FromBody] DodajAdministratoraDto dto)
+        //{
+        //    var nowyUzytkownik = new Uzytkownik
+        //    {
+        //        Imie = dto.Imie,
+        //        Nazwisko = dto.Nazwisko,
+        //        Email = dto.Email,
+        //        Rola = Rola.Administrator
+        //    };
+
+        //    nowyUzytkownik.UstawHaslo(dto.Haslo);
+
+        //    _uzytkownikRepository.Add(nowyUzytkownik);
+        //    return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+        //}
     }
 }
