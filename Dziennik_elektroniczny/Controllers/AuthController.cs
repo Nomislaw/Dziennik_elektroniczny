@@ -37,14 +37,14 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
-            return Unauthorized("Niepoprawny adres e-mail lub hasło.");
+            return Unauthorized(new ErrorResponse { Errors = new List<string> { "Niepoprawny adres e-mail."}});
 
         var result = _passwordHasher.VerifyHashedPassword(user, user.HasloHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
-            return Unauthorized("Niepoprawny adres e-mail lub hasło.");
+            return Unauthorized(new ErrorResponse { Errors = new List<string> { "Niepoprawne hasło."}});
 
         if (!user.CzyEmailPotwierdzony)
-            return Unauthorized("Twoje konto nie zostało jeszcze potwierdzone. Sprawdź pocztę e-mail.");
+            return Unauthorized(new ErrorResponse { Errors = new List<string> { "Twoje konto nie zostało jeszcze potwierdzone. Sprawdź pocztę e-mail."}});
 
         var token = GenerateJwtToken(user);
 
@@ -63,10 +63,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
         if (!ModelState.IsValid)
-            return BadRequest("Wprowadzono niepoprawne dane.");
+            return BadRequest(new ErrorResponse { Errors = new List<string> {"Wprowadzono niepoprawne dane."}});
 
         if (await _context.Uzytkownicy.AnyAsync(u => u.Email == req.Email))
-            return BadRequest("Podany adres e-mail jest już zarejestrowany.");
+            return BadRequest(new ErrorResponse { Errors = new List<string> {"Podany adres e-mail jest już zarejestrowany."}});
 
         var user = new Uzytkownik
         {
@@ -98,12 +98,12 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> VerifyEmail([FromQuery] string token)
     {
         if (string.IsNullOrEmpty(token))
-            return BadRequest(new { message = "Brak tokenu weryfikacyjnego." });
+            return BadRequest(new ErrorResponse { Errors = new List<string> { "Brak tokenu weryfikacyjnego." } } );
 
-        var user = await _context.Uzytkownicy.FirstOrDefaultAsync(u => u.TokenWeryfikacyjny == token);
+    var user = await _context.Uzytkownicy.FirstOrDefaultAsync(u => u.TokenWeryfikacyjny == token);
 
         if (user == null)
-            return BadRequest(new { message = "Niepoprawny lub wygasły token weryfikacyjny." });
+            return BadRequest(new ErrorResponse { Errors = new List<string> {"Niepoprawny lub wygasły token weryfikacyjny." }});
 
         user.CzyEmailPotwierdzony = true;
         user.TokenWeryfikacyjny = null;

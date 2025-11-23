@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzUczniow, pobierzNauczycieli, pobierzRodzicow, pobierzAdministratorow, usunUzytkownika } from "../../api/UżytkownikService";
+import { pobierzUczniow, pobierzNauczycieli, pobierzRodzicow, pobierzAdministratorow, usunUzytkownika } from "../../api/UzytkownikService";
 import { Uzytkownik } from "../../types/Uzytkownik";
 
 type ViewMode = "list" | "details";

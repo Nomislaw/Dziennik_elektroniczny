@@ -1,33 +1,34 @@
 import { useEffect, useState } from "react";
-import { pobierzNauczycieli, usunUzytkownika, dodajNauczyciela, edytujNauczyciela, pobierzKlasy } from "../../api/UzytkownikService";
+import {
+  pobierzAdministratorow,
+  usunUzytkownika,
+  dodajAdministratora,
+  edytujAdministratora,
+  zmienRoleUzytkownika,
+} from "../../api/UzytkownikService";
 
-type Nauczyciel = {
+type Administrator = {
   id: number;
   imie: string;
   nazwisko: string;
   email: string;
   czyEmailPotwierdzony: boolean;
-  czyWychowawca: boolean;
-  wychowawstwoKlasaId?: number;
-  wychowawstwoKlasaNazwa?: string;
-  prowadzonePrzedmioty?: string[];
-  liczbaWystawionychOcen?: number;
+  rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
 };
 
 type ViewMode = "list" | "add" | "edit" | "details";
 
-export default function NauczycieleList() {
-  const [nauczyciele, setNauczyciele] = useState<Nauczyciel[]>([]);
-  const [klasy, setKlasy] = useState<{ id: number; nazwa: string }[]>([]);
+export default function AdministratorzyList() {
+  const [administratorzy, setAdministratorzy] = useState<Administrator[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [selectedNauczyciel, setSelectedNauczyciel] = useState<Nauczyciel | null>(null);
+  const [selectedAdministrator, setSelectedAdministrator] =
+    useState<Administrator | null>(null);
   const [formData, setFormData] = useState({
     imie: "",
     nazwisko: "",
     email: "",
     haslo: "",
-    wychowawstwoKlasaId: 0,
   });
 
   useEffect(() => {
@@ -36,28 +37,25 @@ export default function NauczycieleList() {
 
   const loadData = async () => {
     try {
-      const [nauczycieleData, klasyData] = await Promise.all([
-        pobierzNauczycieli(),
-        pobierzKlasy(),
-      ]);
-      setNauczyciele(nauczycieleData);
-      setKlasy(klasyData);
+      const data = await pobierzAdministratorow();
+      setAdministratorzy(data);
     } catch (err) {
-      console.error("Błąd ładowania danych:", err);
+      console.error("Błąd ładowania administratorów:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Czy na pewno chcesz usunąć tego nauczyciela?")) return;
+    if (!window.confirm("Czy na pewno chcesz usunąć tego administratora?"))
+      return;
     try {
       await usunUzytkownika(id.toString());
-      setNauczyciele((prev) => prev.filter((n) => n.id !== id));
-      alert("Nauczyciel został usunięty.");
+      setAdministratorzy((prev) => prev.filter((a) => a.id !== id));
+      alert("Administrator został usunięty.");
     } catch (err) {
       console.error(err);
-      alert("Nie udało się usunąć nauczyciela.");
+      alert("Nie udało się usunąć administratora.");
     }
   };
 
@@ -68,70 +66,81 @@ export default function NauczycieleList() {
     }
 
     try {
-      await dodajNauczyciela({
-        ...formData,
-        wychowawstwoKlasaId: formData.wychowawstwoKlasaId || undefined,
-      });
-      alert("Nauczyciel został dodany.");
+      await dodajAdministratora(formData);
+      alert("Administrator został dodany.");
       loadData();
       setViewMode("list");
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Nie udało się dodać nauczyciela.");
+      alert("Nie udało się dodać administratora.");
     }
   };
 
   const handleEdit = async () => {
-    if (!selectedNauczyciel) return;
+    if (!selectedAdministrator) return;
 
     try {
-      await edytujNauczyciela(selectedNauczyciel.id.toString(), {
+      await edytujAdministratora(selectedAdministrator.id.toString(), {
         imie: formData.imie,
         nazwisko: formData.nazwisko,
         email: formData.email,
-        wychowawstwoKlasaId: formData.wychowawstwoKlasaId || undefined,
       });
-      alert("Nauczyciel został zaktualizowany.");
+      alert("Administrator został zaktualizowany.");
       loadData();
       setViewMode("list");
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Nie udało się edytować nauczyciela.");
+      alert("Nie udało się edytować administratora.");
     }
   };
 
-  const openEditMode = (nauczyciel: Nauczyciel) => {
-    setSelectedNauczyciel(nauczyciel);
+  const openEditMode = (administrator: Administrator) => {
+    setSelectedAdministrator(administrator);
     setFormData({
-      imie: nauczyciel.imie,
-      nazwisko: nauczyciel.nazwisko,
-      email: nauczyciel.email,
+      imie: administrator.imie,
+      nazwisko: administrator.nazwisko,
+      email: administrator.email,
       haslo: "",
-      wychowawstwoKlasaId: nauczyciel.wychowawstwoKlasaId || 0,
     });
     setViewMode("edit");
   };
 
   const resetForm = () => {
-    setFormData({ imie: "", nazwisko: "", email: "", haslo: "", wychowawstwoKlasaId: 0 });
-    setSelectedNauczyciel(null);
+    setFormData({ imie: "", nazwisko: "", email: "", haslo: "" });
+    setSelectedAdministrator(null);
+  };
+
+  const handleRoleChange = async (id: number, nowaRola: string) => {
+    try {
+      await zmienRoleUzytkownika(id.toString(), nowaRola);
+      setAdministratorzy((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
+      );
+      alert("Rola została zmieniona.");
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Nie udało się zmienić roli.");
+    }
   };
 
   if (loading) return <p>Ładowanie danych...</p>;
 
   return (
     <div>
+      {/* LISTA */}
       {viewMode === "list" && (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Lista nauczycieli ({nauczyciele.length})</h2>
+            <h2 className="text-xl font-bold">
+              Lista administratorów ({administratorzy.length})
+            </h2>
             <button
               onClick={() => setViewMode("add")}
               className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
             >
-              ➕ Dodaj nauczyciela
+              ➕ Dodaj administratora
             </button>
           </div>
 
@@ -139,53 +148,79 @@ export default function NauczycieleList() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imię i nazwisko</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wychowawstwo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Akcje</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Imię i nazwisko
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Rola
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Akcje
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {nauczyciele.map((n) => (
-                  <tr key={n.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{n.id}</td>
+                {administratorzy.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{a.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{n.imie} {n.nazwisko}</div>
+                      <div className="font-medium text-gray-900">
+                        {a.imie} {a.nazwisko}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{n.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {a.email}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {n.czyWychowawca ? (
-                        <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
-                          👨‍🏫 {n.wychowawstwoKlasaNazwa}
+                      <select
+                        value={a.rola}
+                        onChange={(e) => handleRoleChange(a.id, e.target.value)}
+                        className="border rounded-lg px-2 py-1"
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Nauczyciel">Nauczyciel</option>
+                        <option value="Rodzic">Rodzic</option>
+                        <option value="Uczen">Uczeń</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {a.czyEmailPotwierdzony ? (
+                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                          ✓ Potwierdzony
                         </span>
                       ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {n.czyEmailPotwierdzony ? (
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">✓ Potwierdzony</span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">⏳ Niepotwierdzony</span>
+                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                          ⏳ Niepotwierdzony
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                       <button
-                        onClick={() => { setSelectedNauczyciel(n); setViewMode("details"); }}
+                        onClick={() => {
+                          setSelectedAdministrator(a);
+                          setViewMode("details");
+                        }}
                         className="text-blue-600 hover:text-blue-800"
                       >
                         👁 Zobacz
                       </button>
                       <button
-                        onClick={() => openEditMode(n)}
+                        onClick={() => openEditMode(a)}
                         className="text-yellow-600 hover:text-yellow-800"
                       >
                         ✏️ Edytuj
                       </button>
                       <button
-                        onClick={() => handleDelete(n.id)}
+                        onClick={() => handleDelete(a.id)}
                         className="text-red-600 hover:text-red-800"
                       >
                         🗑 Usuń
@@ -199,9 +234,10 @@ export default function NauczycieleList() {
         </>
       )}
 
+      {/* DODAWANIE */}
       {viewMode === "add" && (
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-bold mb-4">Dodaj nowego nauczyciela</h2>
+          <h2 className="text-2xl font-bold mb-4">Dodaj nowego administratora</h2>
           <div className="space-y-4">
             <input
               type="text"
@@ -231,16 +267,6 @@ export default function NauczycieleList() {
               onChange={(e) => setFormData({ ...formData, haslo: e.target.value })}
               className="w-full border rounded-lg px-4 py-2"
             />
-            <select
-              value={formData.wychowawstwoKlasaId}
-              onChange={(e) => setFormData({ ...formData, wychowawstwoKlasaId: Number(e.target.value) })}
-              className="w-full border rounded-lg px-4 py-2"
-            >
-              <option value={0}>Brak wychowawstwa (opcjonalne)</option>
-              {klasy.map((k) => (
-                <option key={k.id} value={k.id}>{k.nazwa}</option>
-              ))}
-            </select>
             <p className="text-sm text-gray-500">* - pola wymagane</p>
           </div>
           <div className="mt-6 flex gap-2">
@@ -251,7 +277,10 @@ export default function NauczycieleList() {
               💾 Zapisz
             </button>
             <button
-              onClick={() => { setViewMode("list"); resetForm(); }}
+              onClick={() => {
+                setViewMode("list");
+                resetForm();
+              }}
               className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
             >
               🔙 Anuluj
@@ -260,9 +289,10 @@ export default function NauczycieleList() {
         </div>
       )}
 
-      {viewMode === "edit" && selectedNauczyciel && (
+      {/* EDYCJA */}
+      {viewMode === "edit" && selectedAdministrator && (
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-bold mb-4">Edytuj nauczyciela</h2>
+          <h2 className="text-2xl font-bold mb-4">Edytuj administratora</h2>
           <div className="space-y-4">
             <input
               type="text"
@@ -285,16 +315,6 @@ export default function NauczycieleList() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full border rounded-lg px-4 py-2"
             />
-            <select
-              value={formData.wychowawstwoKlasaId}
-              onChange={(e) => setFormData({ ...formData, wychowawstwoKlasaId: Number(e.target.value) })}
-              className="w-full border rounded-lg px-4 py-2"
-            >
-              <option value={0}>Brak wychowawstwa</option>
-              {klasy.map((k) => (
-                <option key={k.id} value={k.id}>{k.nazwa}</option>
-              ))}
-            </select>
           </div>
           <div className="mt-6 flex gap-2">
             <button
@@ -304,7 +324,10 @@ export default function NauczycieleList() {
               💾 Zapisz zmiany
             </button>
             <button
-              onClick={() => { setViewMode("list"); resetForm(); }}
+              onClick={() => {
+                setViewMode("list");
+                resetForm();
+              }}
               className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
             >
               🔙 Anuluj
@@ -313,29 +336,30 @@ export default function NauczycieleList() {
         </div>
       )}
 
-      {viewMode === "details" && selectedNauczyciel && (
+      {/* SZCZEGÓŁY */}
+      {viewMode === "details" && selectedAdministrator && (
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-bold mb-4">Szczegóły nauczyciela</h2>
+          <h2 className="text-2xl font-bold mb-4">Szczegóły administratora</h2>
           <div className="space-y-2">
-            <p><strong>ID:</strong> {selectedNauczyciel.id}</p>
-            <p><strong>Imię:</strong> {selectedNauczyciel.imie}</p>
-            <p><strong>Nazwisko:</strong> {selectedNauczyciel.nazwisko}</p>
-            <p><strong>Email:</strong> {selectedNauczyciel.email}</p>
-            <p><strong>Wychowawca:</strong> {selectedNauczyciel.czyWychowawca ? `Tak (${selectedNauczyciel.wychowawstwoKlasaNazwa})` : "Nie"}</p>
-            <p><strong>Email potwierdzony:</strong> {selectedNauczyciel.czyEmailPotwierdzony ? "Tak ✓" : "Nie ✗"}</p>
-            {selectedNauczyciel.prowadzonePrzedmioty && selectedNauczyciel.prowadzonePrzedmioty.length > 0 && (
-              <div>
-                <strong>Prowadzone przedmioty:</strong>
-                <ul className="list-disc ml-6">
-                  {selectedNauczyciel.prowadzonePrzedmioty.map((p, idx) => (
-                    <li key={idx}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {selectedNauczyciel.liczbaWystawionychOcen !== undefined && (
-              <p><strong>Liczba wystawionych ocen:</strong> {selectedNauczyciel.liczbaWystawionychOcen}</p>
-            )}
+            <p>
+              <strong>ID:</strong> {selectedAdministrator.id}
+            </p>
+            <p>
+              <strong>Imię:</strong> {selectedAdministrator.imie}
+            </p>
+            <p>
+              <strong>Nazwisko:</strong> {selectedAdministrator.nazwisko}
+            </p>
+            <p>
+              <strong>Email:</strong> {selectedAdministrator.email}
+            </p>
+            <p>
+              <strong>Email potwierdzony:</strong>{" "}
+              {selectedAdministrator.czyEmailPotwierdzony ? "Tak ✓" : "Nie ✗"}
+            </p>
+            <p>
+              <strong>Rola:</strong> {selectedAdministrator.rola}
+            </p>
           </div>
           <button
             onClick={() => setViewMode("list")}

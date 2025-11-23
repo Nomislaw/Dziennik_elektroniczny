@@ -1,4 +1,5 @@
 ﻿using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs;
 using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ namespace Dziennik_elektroniczny.Controllers
                 var fr = await _frekwencjaRepository.GetAllAsync();
 
                 if (fr == null || !fr.Any())
-                    return NotFound("Nie znaleziono żadnych frekwencji.");
+                    return NotFound(new ErrorResponse { Errors = new List<string> {"Nie znaleziono żadnych frekwencji."}});
 
                 return Ok(fr);
             }
@@ -55,7 +56,7 @@ namespace Dziennik_elektroniczny.Controllers
         public async Task<IActionResult> PutFrekwencja(int id, Frekwencja frekwencja)
         {
             if (id != frekwencja.Id)
-                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"ID w ścieżce nie zgadza się z ID obiektu."}});
 
             _frekwencjaRepository.Update(frekwencja);
 
@@ -63,7 +64,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return NoContent();
+            return Ok(new {message="Zaktualizowano frekwencję."});
         }
 
         // POST: api/Frekwencje
@@ -85,7 +86,7 @@ namespace Dziennik_elektroniczny.Controllers
         {
             var frekwencja = await _frekwencjaRepository.GetByIdAsync(id);
             if (frekwencja == null)
-                return NotFound();
+                return NotFound(new ErrorResponse { Errors = new List<string> {"Nie znaleziono frekwencji."}});
 
             _frekwencjaRepository.Delete(frekwencja);
             var result = await _frekwencjaRepository.SaveChangesAsync();
@@ -93,7 +94,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć rekordu.");
 
-            return NoContent();
+            return Ok(new {message = "Usunięto klasę pomyślnie"});
         }
     }
 }

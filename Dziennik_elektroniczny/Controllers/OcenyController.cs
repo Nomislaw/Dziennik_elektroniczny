@@ -48,7 +48,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return NoContent();
+            return Ok(new {message="Zaktualizowano ocenę."});
         }
 
         // POST: api/Oceny

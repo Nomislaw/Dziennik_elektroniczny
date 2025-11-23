@@ -1,4 +1,5 @@
-﻿using Dziennik_elektroniczny.Interfaces;
+﻿using Dziennik_elektroniczny.DTOs;
+using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,7 +31,7 @@ namespace Dziennik_elektroniczny.Controllers
             var klasa = await _klasaRepository.GetByIdAsync(id);
 
             if (klasa == null)
-                return NotFound();
+                return NotFound(new ErrorResponse { Errors = new List<string> {"Nie znaleziono"}});
 
             return Ok(klasa);
         }
@@ -48,7 +49,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return NoContent();
+            return Ok(new {message = "Zmieniono klase pomyślnie"});
         }
 
         // POST: api/Klasa
@@ -79,7 +80,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć klasy.");
 
-            return NoContent();
+            return Ok(new {message = "Usunięto klasę pomyślnie."});
         }
     }
 }

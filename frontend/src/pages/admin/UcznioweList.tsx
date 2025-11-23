@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy } from "../../api/UżytkownikService";
+import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy } from "../../api/UzytkownikService";
 
 type Uczen = {
   id: number;

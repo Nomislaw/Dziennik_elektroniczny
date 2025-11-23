@@ -32,6 +32,19 @@ builder.Services.AddCors(options =>
         });
 });
 
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value.Errors.Count > 0)
+            .SelectMany(x => x.Value.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        var response = new ErrorResponse { Errors = errors };
+        return new BadRequestObjectResult(response);
+    };
+});
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);

@@ -3,6 +3,11 @@ import { fetchAPI } from "./api";
 const BASE = "/uzytkownik";
 
 // Pobieranie według ról
+export function zmienRoleUzytkownika(id: string, nowaRola: string) {
+  const url = `${BASE}/${id}/rola?nowaRola=${encodeURIComponent(nowaRola)}`;
+  return fetchAPI(url, { method: "POST" });
+}
+
 export function pobierzUczniow() {
   return fetchAPI(`${BASE}/uczniowie`, { method: "GET" });
 }
@@ -149,3 +154,4 @@ export function usunUzytkownika(id: string) {
 export function pobierzKlasy() {
   return fetchAPI("/klasa", { method: "GET" });
 }
+

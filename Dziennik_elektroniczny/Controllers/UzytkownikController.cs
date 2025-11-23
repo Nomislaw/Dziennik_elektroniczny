@@ -35,7 +35,7 @@ namespace Dziennik_elektroniczny.Controllers
         public ActionResult<object> GenerateHash([FromQuery] string password)
         {
             if (string.IsNullOrEmpty(password))
-                return BadRequest("Podaj hasło w parametrze ?password=...");
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Podaj hasło w parametrze ?password=..."}});
 
             var tempUser = new Uzytkownik();
             var hasher = new PasswordHasher<Uzytkownik>();
@@ -66,7 +66,7 @@ namespace Dziennik_elektroniczny.Controllers
 
             if (user == null)
             {
-                return NotFound();
+                return NotFound(new ErrorResponse { Errors = new List<string> {"Nie znaleziono użytkownika"}});
             }
             return Ok(user);
         }
@@ -86,11 +86,11 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (id != user.Id)
             {
-                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"ID w ścieżce nie zgadza się z ID obiektu."}});
             }
 
             _uzytkownikRepository.Update(user, id);
-            return NoContent();
+            return Ok(new {message = "Pomyślnie zaktualizowano użytkownika"});
         }
 
         // DELETE api/<UzytkownikController>/5
@@ -99,7 +99,7 @@ namespace Dziennik_elektroniczny.Controllers
         {
             // ZMIANA: Logika usuwania jak w SemestrController
             _uzytkownikRepository.Delete(id);
-            return NoContent();
+            return Ok(new {message = "Usunięto użytkownika."});
         }
         [Authorize]
         [HttpPatch("password")]
@@ -107,14 +107,14 @@ namespace Dziennik_elektroniczny.Controllers
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
-                return Unauthorized("Nieprawidłowy token JWT.");
+                return Unauthorized(new ErrorResponse { Errors = new List<string> {"Nieprawidłowy token JWT."}});
 
             int userId = int.Parse(userIdClaim);
             var (success, message) = await _uzytkownikRepository.ZmienHasloAsync(userId, stareHaslo, noweHaslo);
             if (!success)
                 return BadRequest(message);
 
-            return Ok("Hasło zostało zmienione.");
+            return Ok(new {message = "Hasło zostało zmienione."});
         }
 
         //PATCH: api/uzytkownik/{id}/dane?imie=Jan&nazwisko=Nowak
@@ -130,9 +130,9 @@ namespace Dziennik_elektroniczny.Controllers
 
             var (success, message) = await _uzytkownikRepository.ZmienDaneAsync(userId, imie, nazwisko);
             if (!success)
-                return BadRequest(message);
+                return BadRequest(new ErrorResponse { Errors = new List<string> {message}});
 
-            return Ok("Dane użytkownika zostały zaktualizowane.");
+            return Ok(new {message = "Dane użytkownika zostały zaktualizowane."});
         }
         [Authorize]
         [HttpPatch("email")]
@@ -147,7 +147,7 @@ namespace Dziennik_elektroniczny.Controllers
             var (success, message) = await _uzytkownikRepository.ZmienEmailAsync(userId, nowyEmail);
             if (!success) return BadRequest(message);
 
-            return Ok("Email użytkownika został zaktualizowany.");
+            return Ok(new {message = "Email użytkownika został zaktualizowany."});
         }
 
         [HttpPost("{id}/link-aktywacyjny")]
@@ -180,14 +180,14 @@ namespace Dziennik_elektroniczny.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(userIdClaim) && int.Parse(userIdClaim) == id)
             {
-                return BadRequest("Nie możesz zmienić sowjej własnej roli");
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Nie możesz zmienić swojej własnej roli"}});
             }
             var (success, message) = await _uzytkownikRepository.ZmienRoleAsync(id, nowaRola);
             if (!success)
             {
-                return BadRequest(message);
+                return BadRequest(new ErrorResponse { Errors = new List<string> {message}});
             }
-            return Ok($"Rola użytkownika została zmieniona na {nowaRola}.");
+            return Ok(new {message = $"Rola użytkownika została zmieniona na {nowaRola}."});
         }
         // POST api/uzytkownik/uczen
         [HttpPost("uczen")]
@@ -247,13 +247,13 @@ namespace Dziennik_elektroniczny.Controllers
             {
                 var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
                 if (klasa == null)
-                    return BadRequest("Podana klasa nie istnieje.");
+                    return BadRequest(new ErrorResponse { Errors = new List<string> {"Podana klasa nie istnieje."}});
 
                 // Sprawdź czy klasa nie ma już wychowawcy
                 var istniejacyWychowawca = await _dbContext.Uzytkownicy
                     .AnyAsync(u => u.Wychowawstwo.Id == dto.WychowawstwoKlasaId.Value);
                 if (istniejacyWychowawca)
-                    return BadRequest("Ta klasa ma już przypisanego wychowawcę.");
+                    return BadRequest(new ErrorResponse { Errors = new List<string> {"Ta klasa ma już przypisanego wychowawcę."}});
 
                 nowyUzytkownik.Wychowawstwo = klasa;
             }
@@ -294,7 +294,7 @@ namespace Dziennik_elektroniczny.Controllers
                 .ToListAsync();
 
             if (dzieci.Count != dto.DzieciIds.Count)
-                return BadRequest("Niektóre z podanych ID nie należą do uczniów.");
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Niektóre z podanych ID nie należą do uczniów."}});
 
             nowyUzytkownik.Dzieci = dzieci;
 
@@ -641,85 +641,85 @@ namespace Dziennik_elektroniczny.Controllers
             return NoContent();
         }
 
-        // PUT: api/uzytkownik/administrator/{id}
-        //[HttpPut("administrator/{id}")]
-        //[Authorize(Roles = "Administrator")]
-        //public async Task<IActionResult> EdytujAdministratora(int id, [FromBody] EdytujAdministratora dto)
-        //{
-        //    var admin = await _dbContext.Uzytkownicy
-        //        .FirstOrDefaultAsync(u => u.Id == id && u.Rola == Rola.Administrator);
+         //PUT: api/uzytkownik/administrator/{id}
+        [HttpPut("administrator/{id}")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> EdytujAdministratora(int id, [FromBody] EdytujAdministratora dto)
+        {
+            var admin = await _dbContext.Uzytkownicy
+                .FirstOrDefaultAsync(u => u.Id == id && u.Rola == Rola.Administrator);
 
-        //    if (admin == null)
-        //        return NotFound("Administrator o podanym ID nie został znaleziony.");
+            if (admin == null)
+                return NotFound("Administrator o podanym ID nie został znaleziony.");
 
-        //    // Aktualizuj podstawowe dane
-        //    admin.Imie = dto.Imie;
-        //    admin.Nazwisko = dto.Nazwisko;
-        //    admin.Email = dto.Email;
+            // Aktualizuj podstawowe dane
+            admin.Imie = dto.Imie;
+            admin.Nazwisko = dto.Nazwisko;
+            admin.Email = dto.Email;
 
-        //    await _dbContext.SaveChangesAsync();
-        //    return NoContent();
-        //}
+            await _dbContext.SaveChangesAsync();
+            return NoContent();
+        }
 
-        // GET: api/uzytkownik/administrator/{id}
-        //[HttpGet("administrator/{id}")]
-        //[Authorize(Roles = "Administrator")]
-        //public async Task<ActionResult<AdministratorDto>> GetAdministratorById(int id)
-        //{
-        //    var administrator = await _dbContext.Uzytkownicy
-        //        .Where(u => u.Id == id && u.Rola == Rola.Administrator)
-        //        .Select(u => new AdministratorDto
-        //        {
-        //            Id = u.Id,
-        //            Imie = u.Imie,
-        //            Nazwisko = u.Nazwisko,
-        //            Email = u.Email,
-        //            CzyEmailPotwierdzony = u.CzyEmailPotwierdzony
-        //        })
-        //        .FirstOrDefaultAsync();
+         //GET: api/uzytkownik/administrator/{id}
+        [HttpGet("administrator/{id}")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<AdministratorDto>> GetAdministratorById(int id)
+        {
+            var administrator = await _dbContext.Uzytkownicy
+                .Where(u => u.Id == id && u.Rola == Rola.Administrator)
+                .Select(u => new AdministratorDto
+                {
+                    Id = u.Id,
+                    Imie = u.Imie,
+                    Nazwisko = u.Nazwisko,
+                    Email = u.Email,
+                    CzyEmailPotwierdzony = u.CzyEmailPotwierdzony
+                })
+                .FirstOrDefaultAsync();
 
-        //    if (administrator == null)
-        //        return NotFound("Administrator o podanym ID nie został znaleziony.");
+            if (administrator == null)
+                return NotFound("Administrator o podanym ID nie został znaleziony.");
 
-        //    return Ok(administrator);
-        //}
+            return Ok(administrator);
+        }
 
         // GET: api/uzytkownik/administratorzy
-        //[HttpGet("administratorzy")]
-        //[Authorize(Roles = "Administrator")]
-        //public async Task<ActionResult<IEnumerable<AdministratorDto>>> GetAdministratorzy()
-        //{
-        //    var administratorzy = await _dbContext.Uzytkownicy
-        //        .Where(u => u.Rola == Rola.Administrator)
-        //        .Select(u => new AdministratorDto
-        //        {
-        //            Id = u.Id,
-        //            Imie = u.Imie,
-        //            Nazwisko = u.Nazwisko,
-        //            Email = u.Email,
-        //            CzyEmailPotwierdzony = u.CzyEmailPotwierdzony
-        //        })
-        //        .ToListAsync();
+        [HttpGet("administratorzy")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<IEnumerable<AdministratorDto>>> GetAdministratorzy()
+        {
+            var administratorzy = await _dbContext.Uzytkownicy
+                .Where(u => u.Rola == Rola.Administrator)
+                .Select(u => new AdministratorDto
+                {
+                    Id = u.Id,
+                    Imie = u.Imie,
+                    Nazwisko = u.Nazwisko,
+                    Email = u.Email,
+                    CzyEmailPotwierdzony = u.CzyEmailPotwierdzony
+                })
+                .ToListAsync();
 
-        //    return Ok(administratorzy);
-        //}
-        // POST api/uzytkownik/administrator
-        //[HttpPost("administrator")]
-        //[Authorize(Roles = "Administrator")]
-        //public async Task<ActionResult<Uzytkownik>> DodajAdministratora([FromBody] DodajAdministratoraDto dto)
-        //{
-        //    var nowyUzytkownik = new Uzytkownik
-        //    {
-        //        Imie = dto.Imie,
-        //        Nazwisko = dto.Nazwisko,
-        //        Email = dto.Email,
-        //        Rola = Rola.Administrator
-        //    };
+            return Ok(administratorzy);
+        }
+         //POST api/uzytkownik/administrator
+        [HttpPost("administrator")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> DodajAdministratora([FromBody] DodajAdministratoraDto dto)
+        {
+            var nowyUzytkownik = new Uzytkownik
+            {
+                Imie = dto.Imie,
+                Nazwisko = dto.Nazwisko,
+                Email = dto.Email,
+                Rola = Rola.Administrator
+            };
 
-        //    nowyUzytkownik.UstawHaslo(dto.Haslo);
+            nowyUzytkownik.UstawHaslo(dto.Haslo);
 
-        //    _uzytkownikRepository.Add(nowyUzytkownik);
-        //    return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
-        //}
+            _uzytkownikRepository.Add(nowyUzytkownik);
+            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+        }
     }
 }

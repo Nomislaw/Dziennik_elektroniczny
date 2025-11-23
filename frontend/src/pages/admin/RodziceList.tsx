@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow } from "../../api/UżytkownikService";
+import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow } from "../../api/UzytkownikService";
 
 type Rodzic = {
   id: number;

@@ -4,6 +4,7 @@ import { Uzytkownik } from "../types/Uzytkownik";
 import UczniowieList from "../pages/admin/UcznioweList";
 import NauczycieleList from "../pages/admin/NauczycielList";
 import RodziceList from "../pages/admin/RodziceList";
+import AdministratorzyList from "../pages/admin/AdministratorList";
 //import AdministratorzyList from "../pages/admin/AdministratorzyList";
 
 export default function AdminDashboard() {
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
             🔐 Administratorzy
           </button>
           <button
-            onClick={() => navigate("/admin/settings")}
+            onClick={() => navigate("/settings")}
             className="w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600"
           >
             ⚙️ Ustawienia
@@ -104,6 +105,7 @@ export default function AdminDashboard() {
           {activeTab === "uczniowie" && <UczniowieList />}
           {activeTab === "nauczyciele" && <NauczycieleList />}
           {activeTab === "rodzice" && <RodziceList />}
+          {activeTab === "administratorzy" && <AdministratorzyList />}
         </div>
       </main>
     </div>
