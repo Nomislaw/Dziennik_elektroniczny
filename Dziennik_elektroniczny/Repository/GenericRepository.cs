@@ -43,6 +43,17 @@ namespace Dziennik_elektroniczny.Repository
             }
         }
 
+        public async Task<IEnumerable<T>> GetAllWithIncludesAsync(params string[] includes)
+        {
+            IQueryable<T> query = _dbContext.Set<T>();
+
+            foreach (var include in includes)
+                query = query.Include(include);
+
+            return await query.ToListAsync();
+        }
+
+
         public async Task<T?> GetByIdAsync(int id)
         {
             try
@@ -56,6 +67,16 @@ namespace Dziennik_elektroniczny.Repository
                 Console.WriteLine($"❌ Error in GetByIdAsync for {typeof(T).Name}: {ex.Message}");
                 throw;
             }
+        }
+
+        public async Task<T> GetByIdWithIncludesAsync(int id, params string[] includes)
+        {
+            IQueryable<T> query = _dbContext.Set<T>();
+
+            foreach (var include in includes)
+                query = query.Include(include);
+
+            return await query.FirstOrDefaultAsync(e => e.Id == id);
         }
 
         public async Task<bool> SaveChangesAsync()

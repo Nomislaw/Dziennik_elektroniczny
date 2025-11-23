@@ -1,4 +1,5 @@
-﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
+﻿using Dziennik_elektroniczny.DTOs.ZajeciaDto;
+using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
@@ -16,67 +17,149 @@ namespace Dziennik_elektroniczny.Controllers
     {
         // ZMIANA: z AppDbContext na IGenericRepository<Zajecia>
         private readonly IGenericRepository<Zajecia> _zajeciaRepository;
+        private readonly IUzytkownikService _uzytkownikRepository;
 
-        public ZajeciaController(IGenericRepository<Zajecia> zajeciaRepository) // ZMIANA
+        public ZajeciaController(IGenericRepository<Zajecia> zajeciaRepository, IUzytkownikService uzytkownikRepository) // ZMIANA
         {
             _zajeciaRepository = zajeciaRepository;
+            _uzytkownikRepository = uzytkownikRepository;
         }
 
         // GET: api/Zajecia
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Zajecia>>> GetZajecia()
+        public async Task<ActionResult<IEnumerable<ZajeciaDto>>> GetZajecia()
         {
-            // ZMIANA: Użycie repozytorium
-            var zajecia = await _zajeciaRepository.GetAllAsync();
-            return Ok(zajecia);
+            var zajecia = await _zajeciaRepository.GetAllWithIncludesAsync(
+               "Plan", "Przedmiot", "Nauczyciel", "Sala"
+            );
+
+            var dto = zajecia.Select(z => new ZajeciaDto
+            {
+                Id = z.Id,
+                GodzinaRozpoczecia = z.GodzinaRozpoczecia,
+                GodzinaZakonczenia = z.GodzinaZakonczenia,
+
+                PlanId = z.PlanId,
+                PlanNazwa = z.Plan?.Id.ToString(),
+
+                PrzedmiotId = z.PrzedmiotId,
+                PrzedmiotNazwa = z.Przedmiot?.Nazwa,
+
+                NauczycielId = z.NauczycielId,
+                NauczycielImieNazwisko = $"{z.Nauczyciel?.Imie} {z.Nauczyciel?.Nazwisko}",
+
+                SalaId = z.SalaId,
+                SalaNazwa = z.Sala?.Numer
+            });
+
+            return Ok(dto);
         }
 
         // GET: api/Zajecia/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Zajecia>> GetZajecia(int id)
+        public async Task<ActionResult<ZajeciaDto>> GetZajecia(int id)
         {
-            // ZMIANA: Użycie repozytorium
-            var zajecia = await _zajeciaRepository.GetByIdAsync(id);
+            var zajecia = await _zajeciaRepository.GetByIdWithIncludesAsync(
+                id,
+                "Plan",
+                "Przedmiot",
+                "Nauczyciel",
+                "Sala"
+            );
 
             if (zajecia == null)
-            {
                 return NotFound();
-            }
 
-            return Ok(zajecia); // ZMIANA: Dodano Ok() dla spójności
+            var dto = new ZajeciaDto
+            {
+                Id = zajecia.Id,
+                GodzinaRozpoczecia = zajecia.GodzinaRozpoczecia,
+                GodzinaZakonczenia = zajecia.GodzinaZakonczenia,
+
+                PlanId = zajecia.PlanId,
+                PlanNazwa = zajecia.Plan?.Id.ToString(),
+
+                PrzedmiotId = zajecia.PrzedmiotId,
+                PrzedmiotNazwa = zajecia.Przedmiot?.Nazwa,
+
+                NauczycielId = zajecia.NauczycielId,
+                NauczycielImieNazwisko = zajecia.Nauczyciel == null
+                    ? null
+                    : $"{zajecia.Nauczyciel.Imie} {zajecia.Nauczyciel.Nazwisko}",
+
+                SalaId = zajecia.SalaId,
+                SalaNazwa = zajecia.Sala?.Numer
+            };
+
+            return Ok(dto);
         }
 
-        // PUT: api/Zajecia/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutZajecia(int id, Zajecia zajecia)
+        // Patch: api/Zajecia/5
+        [HttpPatch("{id}")]
+        public async Task<ActionResult> PatchZajecia(int id, ZajeciaUpdateDto dto)
         {
-            if (id != zajecia.Id)
+            var zajecia = await _zajeciaRepository.GetByIdAsync(id);
+            if (zajecia == null)
+                return NotFound();
+
+            if (dto.GodzinaRozpoczecia != null)
+                zajecia.GodzinaRozpoczecia = dto.GodzinaRozpoczecia;
+
+            if (dto.GodzinaZakonczenia != null)
+                zajecia.GodzinaZakonczenia = dto.GodzinaZakonczenia;
+
+            if (dto.PlanId.HasValue)
+                zajecia.PlanId = dto.PlanId.Value;
+
+            if (dto.PrzedmiotId.HasValue)
+                zajecia.PrzedmiotId = dto.PrzedmiotId.Value;
+
+            if (dto.NauczycielId.HasValue)
             {
-                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
+                var nauczyciel = await _uzytkownikRepository.GetByIdAsync(dto.NauczycielId.Value);
+
+                if (nauczyciel == null)
+                    return BadRequest("Podany nauczyciel nie istnieje.");
+
+                if (nauczyciel.Rola != Rola.Nauczyciel)
+                    return BadRequest("Wybrany użytkownik nie jest nauczycielem.");
+
+                zajecia.NauczycielId = dto.NauczycielId.Value;
             }
 
-            // ZMIANA: Logika aktualizacji jak w ZadanieController
+            if (dto.SalaId.HasValue)
+                zajecia.SalaId = dto.SalaId.Value;
+
             _zajeciaRepository.Update(zajecia);
+            await _zajeciaRepository.SaveChangesAsync();
 
-            var result = await _zajeciaRepository.SaveChangesAsync();
-            if (!result)
-                return StatusCode(500, "Nie udało się zapisać zmian.");
-
-            return NoContent();
+            return Ok(new { message = "Zaktualizowano zajecia" });
         }
 
         // POST: api/Zajecia
         [HttpPost]
-        public async Task<ActionResult<Zajecia>> PostZajecia(Zajecia zajecia)
+        public async Task<ActionResult<Zajecia>> PostZajecia(ZajeciaCreateDto dto)
         {
-            // ZMIANA: Logika dodawania jak w ZadanieController
+            var nauczyciel = await _uzytkownikRepository.GetByIdAsync(dto.NauczycielId);
+            if (nauczyciel == null)
+                return BadRequest("Podany nauczyciel nie istnieje.");
+
+            if (nauczyciel.Rola != Rola.Nauczyciel)
+                return BadRequest("Wybrany użytkownik nie jest nauczycielem");
+
+            var zajecia = new Zajecia
+            {
+                GodzinaRozpoczecia = dto.GodzinaRozpoczecia,
+                GodzinaZakonczenia = dto.GodzinaZakonczenia,
+                PlanId = dto.PlanId,
+                PrzedmiotId = dto.PrzedmiotId,
+                NauczycielId = dto.NauczycielId,
+                SalaId = dto.SalaId
+            };
+
             _zajeciaRepository.Add(zajecia);
-            var result = await _zajeciaRepository.SaveChangesAsync();
+            await _zajeciaRepository.SaveChangesAsync();
 
-            if (!result)
-                return StatusCode(500, "Nie udało się dodać zajęć.");
-
-            // Użycie nameof() jest bezpieczniejsze niż "GetZajecia"
             return CreatedAtAction(nameof(GetZajecia), new { id = zajecia.Id }, zajecia);
         }
 
@@ -97,7 +180,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć zajęć.");
 
-            return NoContent();
+            return Ok(new { message = "Usunieto zajecie" });
         }
     }
 }

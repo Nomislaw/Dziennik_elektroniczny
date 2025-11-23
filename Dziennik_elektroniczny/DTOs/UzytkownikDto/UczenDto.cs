@@ -1,4 +1,4 @@
-﻿namespace Dziennik_elektroniczny.DTOs
+﻿namespace Dziennik_elektroniczny.DTOs.UzytkownikDto
 {
     public class UczenDto
     {

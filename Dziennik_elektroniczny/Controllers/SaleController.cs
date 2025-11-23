@@ -60,7 +60,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return NoContent();
+            return Ok(new { message = "Zaktualizowano sale" });
         }
 
         // POST: api/Sale
@@ -95,7 +95,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć sali.");
 
-            return NoContent();
+            return Ok(new { message = "Usunieto sale" });
         }
     }
 }

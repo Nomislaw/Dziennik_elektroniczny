@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 using Dziennik_elektroniczny.Data;
 using Dziennik_elektroniczny.DTOs;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity; // Dodane dla Task
+using Microsoft.AspNetCore.Identity;
+using Dziennik_elektroniczny.DTOs.UzytkownikDto; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -721,5 +722,43 @@ namespace Dziennik_elektroniczny.Controllers
             _uzytkownikRepository.Add(nowyUzytkownik);
             return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
         }
+        // DELETE: api/uzytkownik/administrator/{id}
+        [HttpDelete("administrator/{id}")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> UsunAdministratora(int id)
+        {
+            // 1. Pobierz użytkownika z repozytorium
+            var admin = await _uzytkownikRepository.GetByIdAsync(id);
+            if (admin == null || admin.Rola != Rola.Administrator)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Errors = new List<string> { "Administrator o podanym ID nie został znaleziony." }
+                });
+            }
+
+            // 2. Pobierz ID aktualnie zalogowanego admina
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Nieprawidłowy token JWT.");
+
+            int currentAdminId = int.Parse(userIdClaim);
+
+            // 3. Nie pozwól usuwać samego siebie
+            if (currentAdminId == id)
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Errors = new List<string> { "Nie możesz usunąć swojego własnego konta administratora." }
+                });
+            }
+
+            // 4. Usuń przez repozytorium
+            _uzytkownikRepository.Delete(id);
+
+            return Ok(new { message = "Administrator został pomyślnie usunięty." });
+        }
+
     }
+
 }

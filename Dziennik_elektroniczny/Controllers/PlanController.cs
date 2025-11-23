@@ -1,4 +1,5 @@
-﻿using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
+﻿using Dziennik_elektroniczny.DTOs.PlanyDto;
+using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
@@ -21,16 +22,25 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         // GET: api/Plany
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Plan>>> GetPlany()
+        [HttpGet("plany")]
+        public async Task<ActionResult<IEnumerable<PlanDto>>> GetPlany()
         {
             // ZMIANA: Użycie repozytorium
-            var plany = await _planRepository.GetAllAsync();
-            return Ok(plany);
+            var plany = await _planRepository.GetAllWithIncludesAsync("Klasa", "Semestr");
+            var dto = plany.Select(p => new PlanDto
+            {
+                Id = p.Id,
+                KlasaId = p.KlasaId,
+                KlasaNazwa = p.Klasa.Nazwa,
+                SemestrId = p.SemestrId,
+                SemestrNazwa = $"{p.Semestr.DataRozpoczecia:yyyy-MM-dd} - {p.Semestr.DataZakonczenia:yyyy-MM-dd}"
+            });
+
+            return Ok(dto);
         }
 
         // GET: api/Plany/5
-        [HttpGet("{id}")]
+        [HttpGet("plany/{id}")]
         public async Task<ActionResult<Plan>> GetPlan(int id)
         {
             // ZMIANA: Użycie repozytorium
@@ -45,7 +55,7 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         // PUT: api/Plany/5
-        [HttpPut("{id}")]
+        [HttpPut("plany/{id}")]
         public async Task<IActionResult> PutPlan(int id, Plan plan)
         {
             if (id != plan.Id)
@@ -63,11 +73,39 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(new {message="Zaktualizowano plan"});
         }
 
+        [HttpPatch("plany/{id}")]
+        public async Task<IActionResult> PatchPlan(int id, PlanUpdateDto dto)
+        {
+            var plan = await _planRepository.GetByIdAsync(id);
+            if (plan == null)
+                return NotFound();
+
+            if (dto.KlasaId.HasValue)
+                plan.KlasaId = dto.KlasaId.Value;
+
+            if (dto.SemestrId.HasValue)
+                plan.SemestrId = dto.SemestrId.Value;
+
+            _planRepository.Update(plan);
+            var result = await _planRepository.SaveChangesAsync();
+
+            if (!result)
+                return StatusCode(500, "Nie udało się zaktualizować");
+
+            return Ok(new { message = "Zaktualizowano plan" });
+        }
+
+
         // POST: api/Plany
-        [HttpPost]
-        public async Task<ActionResult<Plan>> PostPlan(Plan plan)
+        [HttpPost("plan")]
+        public async Task<ActionResult<Plan>> PostPlan(PlanCreateDto dto)
         {
             // ZMIANA: Logika dodawania jak w OcenyController
+            var plan = new Plan
+            {
+                KlasaId = dto.KlasaId,
+                SemestrId = dto.SemestrId
+            };
             _planRepository.Add(plan);
             var result = await _planRepository.SaveChangesAsync();
 
@@ -78,7 +116,7 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         // DELETE: api/Plany/5
-        [HttpDelete("{id}")]
+        [HttpDelete("plany/{id}")]
         public async Task<IActionResult> DeletePlan(int id)
         {
             // ZMIANA: Logika usuwania jak w OcenyController
@@ -94,7 +132,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć planu.");
 
-            return NoContent();
+            return Ok(new { message = "Usunieto plan" });
         }
     }
 }

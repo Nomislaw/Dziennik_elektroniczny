@@ -1,4 +1,4 @@
-﻿namespace Dziennik_elektroniczny.DTOs;
+﻿namespace Dziennik_elektroniczny.DTOs.UzytkownikDto;
 
 // DTO do wyświetlania administratora
 public class AdministratorDto

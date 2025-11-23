@@ -60,7 +60,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return NoContent();
+            return Ok(new { message = "Zaktualizowano przedmiot" });
         }
 
         // POST: api/Przedmioty
@@ -95,7 +95,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć przedmiotu.");
 
-            return NoContent();
+            return Ok(new { message = "Usunieto przedmiot" });
         }
     }
 }
