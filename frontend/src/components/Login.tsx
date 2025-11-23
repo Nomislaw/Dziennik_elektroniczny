@@ -25,7 +25,14 @@ export default function Login() {
       localStorage.setItem("token", user.token);
       console.log("Zalogowano użytkownika:", user);
   
-      router("/dashboard");
+      if (user.rola === "Administrator") {
+          router("/admin");
+          } else if (user.rola === "Nauczyciel") {
+            router("/teacher");
+          }
+           else {
+          router("/dashboard");
+          }
     } catch (err: any) {
       setError(err.message || "Błąd logowania");
     } finally {

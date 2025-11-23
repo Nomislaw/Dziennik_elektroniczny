@@ -6,6 +6,11 @@ import VerifyEmail from "./components/VerifyEmail";
 import Settings from "./pages/Settings";
 import AdminPanel from "./layouts/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PlanLekcji from "./pages/PlanLekcji";
+import Oceny from "./pages/Oceny";
+import TeacherPanel from "./layouts/TeacherPanel";
+
+
 
 function Navigation() {
   const location = useLocation();
@@ -41,14 +46,18 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
 
         {/* Uczeń */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["Uczen"]}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+       <Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute allowedRoles={["Uczen"]}>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+>
+  <Route path="plan" element={<PlanLekcji />} />
+  <Route path="oceny" element={<Oceny />} />
+</Route>
+
 
         {/* Administrator */}
         <Route
@@ -59,6 +68,17 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Nauczyciel */}
+<Route
+  path="/teacher"
+  element={
+    <ProtectedRoute allowedRoles={["Nauczyciel"]}>
+      <TeacherPanel />
+    </ProtectedRoute>
+  }
+/>
+
       </Routes>
     </Router>
   );

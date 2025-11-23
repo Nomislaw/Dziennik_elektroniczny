@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom"; // Outlet bardzo ważny
 import { Uzytkownik } from "../types/Uzytkownik";
+//import Schedule from "../components/Schedule";
+
 
 
 interface DashboardLayoutProps {
@@ -42,18 +44,27 @@ export default function Dashboard({ children }: DashboardLayoutProps) {
           🏫 Dziennik
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
-            🏠 Strona główna
-          </button>
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
-            📅 Plan lekcji
-          </button>
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
-            🧮 Oceny
-          </button>
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
-            📘 Przedmioty
-          </button>
+          <button
+  onClick={() => navigate("/dashboard")}
+  className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600"
+>
+  🏠 Strona główna
+</button>
+
+<button
+  onClick={() => navigate("/dashboard/plan")}
+  className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600"
+>
+  📅 Plan lekcji
+</button>
+
+<button
+  onClick={() => navigate("/dashboard/oceny")}
+  className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600"
+>
+  🧮 Oceny
+</button>
+
           <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600">
             ✉️ Wiadomości
           </button>
