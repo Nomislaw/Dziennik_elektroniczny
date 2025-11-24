@@ -5,7 +5,10 @@ import UczniowieList from "../pages/admin/UcznioweList";
 import NauczycieleList from "../pages/admin/NauczycielList";
 import RodziceList from "../pages/admin/RodziceList";
 import AdministratorzyList from "../pages/admin/AdministratorList";
+import SaleList from "../pages/admin/SaleList";
 //import AdministratorzyList from "../pages/admin/AdministratorzyList";
+import PrzedmiotList from "../pages/admin/PrzedmiotList";
+
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -75,6 +78,24 @@ export default function AdminDashboard() {
           >
             ⚙️ Ustawienia
           </button>
+          <button
+  onClick={() => setActiveTab("sale")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "sale" ? "bg-teal-600" : ""
+  }`}
+>
+  🏫 Sale
+</button>
+<button
+  onClick={() => setActiveTab("przedmioty")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "przedmioty" ? "bg-teal-600" : ""
+  }`}
+>
+  📘 Przedmioty
+</button>
+
+
         </nav>
         <div className="p-4 border-t border-teal-600">
           <div className="mb-2 text-sm">
@@ -98,6 +119,10 @@ export default function AdminDashboard() {
             {activeTab === "nauczyciele" && "Zarządzanie nauczycielami"}
             {activeTab === "rodzice" && "Zarządzanie rodzicami"}
             {activeTab === "administratorzy" && "Zarządzanie administratorami"}
+            {activeTab === "sale" && "Zarządzanie salami"}
+            {activeTab === "przedmioty" && "Zarządzanie przedmiotami"}
+
+
           </h1>
         </header>
 
@@ -106,6 +131,10 @@ export default function AdminDashboard() {
           {activeTab === "nauczyciele" && <NauczycieleList />}
           {activeTab === "rodzice" && <RodziceList />}
           {activeTab === "administratorzy" && <AdministratorzyList />}
+          {activeTab === "sale" && <SaleList />}
+          {activeTab === "przedmioty" && <PrzedmiotList />}
+
+
         </div>
       </main>
     </div>
