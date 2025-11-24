@@ -37,7 +37,7 @@ export default function OcenyNauczyciel({ nauczyciel }: OcenyNauczycielProps) {
     const fetchUczniowie = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/Uzytkownik/uczniowie", {
+        const res = await fetch("https://localhost:7292/api/Uzytkownik/uczniowie", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -98,9 +98,16 @@ export default function OcenyNauczyciel({ nauczyciel }: OcenyNauczycielProps) {
                 />
               </td>
               <td className="border p-2">
-                <select value={typ} onChange={(e) => setTyp(e.target.value as TypOceny)}>
-                  {Object.values(TypOceny).map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                <select
+                  value={typ}
+                  onChange={(e) => setTyp(Number(e.target.value))}
+                >
+                  {Object.keys(TypOceny)
+                    .filter((k) => isNaN(Number(k)) === true) // zostaw tylko nazwy
+                    .map((key) => (
+                      <option key={key} value={TypOceny[key as keyof typeof TypOceny]}>
+                        {key}
+                      </option>
                   ))}
                 </select>
               </td>

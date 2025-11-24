@@ -1,6 +1,6 @@
 import { OcenaCreateDto } from "../types/Ocena";
 
-const API_URL = "http://localhost:5000/api/Oceny";
+const API_URL = "https://localhost:7292/api/Oceny";
 
 export async function addOcena(dto: OcenaCreateDto) {
   const token = localStorage.getItem("token");
