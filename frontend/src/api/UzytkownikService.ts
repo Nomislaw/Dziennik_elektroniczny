@@ -150,8 +150,19 @@ export function usunUzytkownika(id: string) {
   });
 }
 
+export function aktywujUzytkownika(id: number) {
+  return fetchAPI(`${BASE}/${id}/aktywuj-profil`, {
+    method: "PUT",
+  });
+}
+
+export function wyslijTokenUzytkownika(id: number) {
+  return fetchAPI(`${BASE}/${id}/link-aktywacyjny`, {
+    method: "POST",
+  });
+}
+
 // Pobieranie klas (dla select w formularzach)
 export function pobierzKlasy() {
   return fetchAPI("/klasa", { method: "GET" });
 }
-

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow } from "../../api/UzytkownikService";
+import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow, zmienRoleUzytkownika,aktywujUzytkownika,
+  wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Rodzic = {
   id: number;
@@ -7,6 +8,7 @@ type Rodzic = {
   nazwisko: string;
   email: string;
   czyEmailPotwierdzony: boolean;
+   rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
   dzieci?: { id: number; imie: string; nazwisko: string; klasaNazwa?: string }[];
 };
 
@@ -46,6 +48,50 @@ export default function RodziceList() {
     setLoading(false);
   }
 };
+ const handleRoleChange = async (id: number, nowaRola: string) => {
+      try {
+        await zmienRoleUzytkownika(id.toString(), nowaRola);
+        setRodzice((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
+        );
+        alert("Rola została zmieniona.");
+        loadData();
+      } catch (err: any) {
+        console.error(err);
+        alert(err?.message || "Nie udało się zmienić roli.");
+      }
+    };
+  
+    const handleActiveUser = async (id: number) => {
+    const user = rodzice.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz aktywować to konto?")) return;
+
+    try {
+      await aktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+  const handleSendTokenToUser = async (id: number) => {
+    const user = rodzice.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz wysłać token do użytkownika?")) return;
+
+    try {
+      await wyslijTokenUzytkownika(id);
+      alert("Wysłano token pomyślnie!");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas wysyłania tokenu do użytkownika");
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Czy na pewno chcesz usunąć tego rodzica?")) return;
@@ -151,6 +197,7 @@ export default function RodziceList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imię i nazwisko</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rola</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dzieci</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Akcje</th>
@@ -164,6 +211,18 @@ export default function RodziceList() {
                       <div className="font-medium text-gray-900">{r.imie} {r.nazwisko}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.email}</td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={r.rola}
+                        onChange={(e) => handleRoleChange(r.id, e.target.value)}
+                        className="border rounded-lg px-2 py-1"
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Nauczyciel">Nauczyciel</option>
+                        <option value="Rodzic">Rodzic</option>
+                        <option value="Uczen">Uczeń</option>
+                      </select>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       {r.dzieci && r.dzieci.length > 0 ? (
                         <div className="space-y-1">
@@ -203,6 +262,23 @@ export default function RodziceList() {
                       >
                         🗑 Usuń
                       </button>
+                       {r.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleActiveUser(r.id)}
+                          >
+                            ✅ Aktywuj
+                          </button>
+                        )}
+
+                        {r.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleSendTokenToUser(r.id)}
+                          >
+                            📩 Wyślij token
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}

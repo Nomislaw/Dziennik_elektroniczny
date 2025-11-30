@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy } from "../../api/UzytkownikService";
+import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy, zmienRoleUzytkownika,aktywujUzytkownika,
+  wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Uczen = {
   id: number;
@@ -9,6 +10,7 @@ type Uczen = {
   klasaId?: number;
   klasaNazwa?: string;
   czyEmailPotwierdzony: boolean;
+   rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
   rodzice?: { id: number; imie: string; nazwisko: string }[];
 };
 
@@ -77,6 +79,51 @@ export default function UczniowieList() {
     }
   };
 
+   const handleRoleChange = async (id: number, nowaRola: string) => {
+        try {
+          await zmienRoleUzytkownika(id.toString(), nowaRola);
+          setUczniowie((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
+          );
+          alert("Rola została zmieniona.");
+          loadData();
+        } catch (err: any) {
+          console.error(err);
+          alert(err?.message || "Nie udało się zmienić roli.");
+        }
+      };
+    
+      const handleActiveUser = async (id: number) => {
+    const user = uczniowie.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz aktywować to konto?")) return;
+
+    try {
+      await aktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+  const handleSendTokenToUser = async (id: number) => {
+    const user = uczniowie.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz wysłać token do użytkownika?")) return;
+
+    try {
+      await wyslijTokenUzytkownika(id);
+      alert("Wysłano token pomyślnie!");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas wysyłania tokenu do użytkownika");
+    }
+  };
+
   const handleEdit = async () => {
     if (!selectedUczen) return;
 
@@ -137,6 +184,7 @@ export default function UczniowieList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imię i nazwisko</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rola</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Klasa</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Akcje</th>
@@ -150,6 +198,18 @@ export default function UczniowieList() {
                       <div className="font-medium text-gray-900">{u.imie} {u.nazwisko}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={u.rola}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="border rounded-lg px-2 py-1"
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Nauczyciel">Nauczyciel</option>
+                        <option value="Rodzic">Rodzic</option>
+                        <option value="Uczen">Uczeń</option>
+                      </select>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{u.klasaNazwa || "—"}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {u.czyEmailPotwierdzony ? (
@@ -177,6 +237,24 @@ export default function UczniowieList() {
                       >
                         🗑 Usuń
                       </button>
+
+                       {u.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleActiveUser(u.id)}
+                          >
+                            ✅ Aktywuj
+                          </button>
+                        )}
+
+                        {u.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleSendTokenToUser(u.id)}
+                          >
+                            📩 Wyślij token
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}

@@ -1,4 +1,6 @@
-﻿namespace Dziennik_elektroniczny.DTOs.UzytkownikDto
+﻿using Dziennik_elektroniczny.Models;
+
+namespace Dziennik_elektroniczny.DTOs.UzytkownikDto
 {
     public class UczenDto
     {
@@ -6,6 +8,7 @@
         public string Imie { get; set; }
         public string Nazwisko { get; set; }
         public string Email { get; set; }
+        public string Rola { get; set; }
         public int? KlasaId { get; set; }
         public string KlasaNazwa { get; set; }
         public bool CzyEmailPotwierdzony { get; set; }

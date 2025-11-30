@@ -6,6 +6,7 @@
         public string Imie { get; set; }
         public string Nazwisko { get; set; }
         public string Email { get; set; }
+        public string Rola { get; set; }
         public bool CzyEmailPotwierdzony { get; set; }
         public bool CzyWychowawca { get; set; }
         public string? WychowawstwoKlasaNazwa { get; set; }
