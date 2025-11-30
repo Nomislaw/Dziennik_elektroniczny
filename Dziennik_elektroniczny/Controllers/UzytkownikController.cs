@@ -98,7 +98,20 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id) // ZMIANA: typ zwracany
         {
-            // ZMIANA: Logika usuwania jak w SemestrController
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Nieprawidłowy token JWT.");
+
+            int currentUserId = int.Parse(userIdClaim);
+
+            // 3. Nie pozwól usuwać samego siebie
+            if (currentUserId == id)
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Errors = new List<string> { "Nie możesz usunąć swojego własnego konta." }
+                });
+            }
             _uzytkownikRepository.Delete(id);
             return Ok(new {message = "Usunięto użytkownika."});
         }
@@ -155,7 +168,7 @@ namespace Dziennik_elektroniczny.Controllers
         [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<Uzytkownik>> WyslijTokenWeryfikacyjny(int id)
         {
-            var user = await _uzytkownikRepository.GetByIdAsync(id);
+            var user = await _dbContext.Uzytkownicy.FirstOrDefaultAsync(u => u.Id == id);
             if (user == null) return null;
             if (user.CzyEmailPotwierdzony) return BadRequest("Użytkownik już zweryfikował e-mail");
 
@@ -171,6 +184,22 @@ namespace Dziennik_elektroniczny.Controllers
             await _emailService.SendEmailAsync(user.Email, "Weryfikacja konta", body);
 
             return Ok(new { message = "Token weryfikacyjny został pomyślnie wysłany." });
+        }
+        
+        [HttpPut("{id}/aktywuj-profil")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> AktywujProfil(int id)
+        {
+            var user = await _dbContext.Uzytkownicy.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return null;
+            if (user.CzyEmailPotwierdzony) return BadRequest(new ErrorResponse { Errors = new List<string> { "Użytkownik już jest aktywny" } });
+            
+            user.TokenWeryfikacyjny = null;
+            user.CzyEmailPotwierdzony = true;
+            
+            await _dbContext.SaveChangesAsync();
+            
+            return Ok(user);
         }
         
         [HttpPost("{id}/rola")]
@@ -325,6 +354,7 @@ namespace Dziennik_elektroniczny.Controllers
                     Imie = u.Imie,
                     Nazwisko = u.Nazwisko,
                     Email = u.Email,
+                    Rola = u.Rola.ToString(),
                     KlasaNazwa = u.Klasa.Nazwa,
                     KlasaId = u.KlasaId,
                     CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
@@ -354,6 +384,7 @@ namespace Dziennik_elektroniczny.Controllers
                     Imie = u.Imie,
                     Nazwisko = u.Nazwisko,
                     Email = u.Email,
+                    Rola = u.Rola.ToString(),
                     CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
                     CzyWychowawca = u.Wychowawstwo != null,
                     WychowawstwoKlasaNazwa = u.Wychowawstwo != null ? u.Wychowawstwo.Nazwa : null
@@ -378,6 +409,7 @@ namespace Dziennik_elektroniczny.Controllers
                     Imie = u.Imie,
                     Nazwisko = u.Nazwisko,
                     Email = u.Email,
+                    Rola = u.Rola.ToString(),
                     CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
                     Dzieci = u.Dzieci.Select(d => new UczenSimpleDto
                     {
@@ -737,6 +769,7 @@ namespace Dziennik_elektroniczny.Controllers
                 });
             }
 
+
             // 2. Pobierz ID aktualnie zalogowanego admina
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
@@ -745,7 +778,7 @@ namespace Dziennik_elektroniczny.Controllers
             int currentAdminId = int.Parse(userIdClaim);
 
             // 3. Nie pozwól usuwać samego siebie
-            if (currentAdminId == id)
+            if (currentAdminId == admin.Id)
             {
                 return BadRequest(new ErrorResponse
                 {
@@ -758,6 +791,8 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(new { message = "Administrator został pomyślnie usunięty." });
         }
+        
+
 
     }
 

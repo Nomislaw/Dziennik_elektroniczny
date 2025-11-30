@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { pobierzNauczycieli, usunUzytkownika, dodajNauczyciela, edytujNauczyciela, pobierzKlasy } from "../../api/UzytkownikService";
+import { pobierzNauczycieli, usunUzytkownika, dodajNauczyciela, edytujNauczyciela, pobierzKlasy, zmienRoleUzytkownika, aktywujUzytkownika,
+  wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Nauczyciel = {
   id: number;
   imie: string;
   nazwisko: string;
   email: string;
+   rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
   czyEmailPotwierdzony: boolean;
   czyWychowawca: boolean;
   wychowawstwoKlasaId?: number;
@@ -114,6 +116,50 @@ export default function NauczycieleList() {
     setViewMode("edit");
   };
 
+  const handleRoleChange = async (id: number, nowaRola: string) => {
+      try {
+        await zmienRoleUzytkownika(id.toString(), nowaRola);
+        setNauczyciele((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
+        );
+        alert("Rola została zmieniona.");
+        loadData();
+      } catch (err: any) {
+        console.error(err);
+        alert(err?.message || "Nie udało się zmienić roli.");
+      }
+    };
+  const handleActiveUser = async (id: number) => {
+    const user = nauczyciele.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz aktywować to konto?")) return;
+
+    try {
+      await aktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+  const handleSendTokenToUser = async (id: number) => {
+    const user = nauczyciele.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz wysłać token do użytkownika?")) return;
+
+    try {
+      await wyslijTokenUzytkownika(id);
+      alert("Wysłano token pomyślnie!");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas wysyłania tokenu do użytkownika");
+    }
+  };
+
   const resetForm = () => {
     setFormData({ imie: "", nazwisko: "", email: "", haslo: "", wychowawstwoKlasaId: 0 });
     setSelectedNauczyciel(null);
@@ -142,6 +188,7 @@ export default function NauczycieleList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imię i nazwisko</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rola</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wychowawstwo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Akcje</th>
@@ -155,7 +202,20 @@ export default function NauczycieleList() {
                       <div className="font-medium text-gray-900">{n.imie} {n.nazwisko}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{n.email}</td>
+              
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={n.rola}
+                        onChange={(e) => handleRoleChange(n.id, e.target.value)}
+                        className="border rounded-lg px-2 py-1"
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Nauczyciel">Nauczyciel</option>
+                        <option value="Rodzic">Rodzic</option>
+                        <option value="Uczen">Uczeń</option>
+                      </select>
+                    </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {n.czyWychowawca ? (
                         <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
                           👨‍🏫 {n.wychowawstwoKlasaNazwa}
@@ -190,6 +250,23 @@ export default function NauczycieleList() {
                       >
                         🗑 Usuń
                       </button>
+                       {n.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleActiveUser(n.id)}
+                          >
+                            ✅ Aktywuj
+                          </button>
+                        )}
+
+                        {n.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleSendTokenToUser(n.id)}
+                          >
+                            📩 Wyślij token
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}
@@ -256,6 +333,7 @@ export default function NauczycieleList() {
             >
               🔙 Anuluj
             </button>
+            
           </div>
         </div>
       )}

@@ -5,6 +5,8 @@ import {
   dodajAdministratora,
   edytujAdministratora,
   zmienRoleUzytkownika,
+  aktywujUzytkownika,
+  wyslijTokenUzytkownika
 } from "../../api/UzytkownikService";
 
 type Administrator = {
@@ -96,6 +98,38 @@ export default function AdministratorzyList() {
     }
   };
 
+const handleActiveUser = async (id: number) => {
+    const user = administratorzy.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz aktywować to konto?")) return;
+
+    try {
+      await aktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+  const handleSendTokenToUser = async (id: number) => {
+    const user = administratorzy.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz wysłać token do użytkownika?")) return;
+
+    try {
+      await wyslijTokenUzytkownika(id);
+      alert("Wysłano token pomyślnie!");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas wysyłania tokenu do użytkownika");
+    }
+  };
+
+
   const openEditMode = (administrator: Administrator) => {
     setSelectedAdministrator(administrator);
     setFormData({
@@ -119,6 +153,7 @@ export default function AdministratorzyList() {
         prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
       );
       alert("Rola została zmieniona.");
+      loadData();
     } catch (err: any) {
       console.error(err);
       alert(err?.message || "Nie udało się zmienić roli.");
@@ -225,6 +260,24 @@ export default function AdministratorzyList() {
                       >
                         🗑 Usuń
                       </button>
+                        {a.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleActiveUser(a.id)}
+                          >
+                            ✅ Aktywuj
+                          </button>
+                        )}
+
+                        {a.czyEmailPotwierdzony === false && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleSendTokenToUser(a.id)}
+                          >
+                            📩 Wyślij token
+                          </button>
+                        )}
+
                     </td>
                   </tr>
                 ))}
