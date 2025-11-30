@@ -341,7 +341,7 @@ namespace Dziennik_elektroniczny.Controllers
         }
         // GET: api/uzytkownik/uczniowie
         [HttpGet("uczniowie")]
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Nauczyciel")]
         public async Task<ActionResult<IEnumerable<UczenDto>>> GetUczniowie()
         {
             var uczniowie = await _dbContext.Uzytkownicy

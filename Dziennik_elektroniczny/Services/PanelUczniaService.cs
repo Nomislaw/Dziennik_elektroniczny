@@ -33,7 +33,7 @@ namespace Dziennik_elektroniczny.Services
                 })
                 .ToListAsync();
 
-            // Grupowanie po przedmiotach i obliczanie średnich arytmetycznych
+            
             var ocenyPoPrzedmiotach = oceny
                 .GroupBy(o => o.PrzedmiotNazwa)
                 .Select(group => new OcenyPoPrzedmiotachDto
@@ -103,7 +103,7 @@ namespace Dziennik_elektroniczny.Services
 
         public async Task<FrekwencjaUczniaResponseDto> GetFrekwencjaAsync(int uczenId, DateTime? dataOd = null, DateTime? dataDo = null)
         {
-            // Domyślnie pokaż aktualny rok szkolny (od września)
+            
             var start = dataOd ?? new DateTime(
                 DateTime.Today.Month >= 9 ? DateTime.Today.Year : DateTime.Today.Year - 1,
                 9,
@@ -170,7 +170,7 @@ namespace Dziennik_elektroniczny.Services
             if (uczen == null)
                 return null;
 
-            // Ostatnie 5 ocen
+            
             var ostatnieOceny = await _context.Oceny
                 .Include(o => o.Przedmiot)
                 .Include(o => o.Nauczyciel)
@@ -189,7 +189,7 @@ namespace Dziennik_elektroniczny.Services
                 })
                 .ToListAsync();
 
-            // Plan lekcji
+            
             var planLekcji = new List<ZajeciaUczniaDto>();
             if (uczen.Klasa?.Plan?.Zajecia != null)
             {
@@ -207,7 +207,7 @@ namespace Dziennik_elektroniczny.Services
                     .ToList();
             }
 
-            // Średnia ocen
+            
             var wszystkieOceny = await _context.Oceny
                 .Where(o => o.UczenId == uczenId)
                 .Select(o => o.Wartosc)
@@ -217,7 +217,7 @@ namespace Dziennik_elektroniczny.Services
                 ? (float)Math.Round(wszystkieOceny.Average(), 2)
                 : 0;
 
-            // Procent obecności (rok szkolny)
+            
             var rokSzkolny = new DateTime(
                 DateTime.Today.Month >= 9 ? DateTime.Today.Year : DateTime.Today.Year - 1,
                 9,

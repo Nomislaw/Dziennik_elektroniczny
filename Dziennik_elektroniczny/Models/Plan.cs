@@ -2,7 +2,7 @@
 {
     public class Plan : BaseEntity
     {
-
+        public DayOfWeek? DzienTygodnia { get; set; }
         // Relacja 1-do-1 (odwrotność): Plan jest przypisany do jednej klasy
         public int KlasaId { get; set; } // Klucz obcy
         public virtual Klasa Klasa { get; set; }

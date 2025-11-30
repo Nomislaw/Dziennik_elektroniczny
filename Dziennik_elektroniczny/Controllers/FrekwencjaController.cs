@@ -3,30 +3,34 @@ using Dziennik_elektroniczny.DTOs;
 using Dziennik_elektroniczny.DTOs.FrekwencjaDto;
 using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Dziennik_elektroniczny.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Wymaga autoryzacji dla wszystkich endpointów
     public class FrekwencjaController : ControllerBase
     {
         private readonly IGenericRepository<Frekwencja> _frekwencjaRepository;
         private readonly IUzytkownikService _uzytkownikRepository;
         private readonly IGenericRepository<Zajecia> _zajeciaRepository;
 
-        public FrekwencjaController(IGenericRepository<Frekwencja> frekwencjaRepository,IUzytkownikService uzytkownikService, IGenericRepository<Zajecia> zajeciaRepository)
+        public FrekwencjaController(
+            IGenericRepository<Frekwencja> frekwencjaRepository,
+            IUzytkownikService uzytkownikService,
+            IGenericRepository<Zajecia> zajeciaRepository)
         {
             _frekwencjaRepository = frekwencjaRepository;
             _uzytkownikRepository = uzytkownikService;
             _zajeciaRepository = zajeciaRepository;
         }
 
-        // GET: api/Frekwencje
+        // GET: api/Frekwencja
         [HttpGet]
+        [Authorize(Roles = "Admin,Nauczyciel")]
         public async Task<ActionResult<IEnumerable<FrekwencjaDto>>> GetFrekwencje()
         {
             try
@@ -61,8 +65,9 @@ namespace Dziennik_elektroniczny.Controllers
             }
         }
 
-        // GET: api/Frekwencje/5
+        // GET: api/Frekwencja/{id}
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Nauczyciel,Uczen,Rodzic")]
         public async Task<ActionResult<FrekwencjaDto>> GetFrekwencja(int id)
         {
             var f = await _frekwencjaRepository.GetByIdWithIncludesAsync(
@@ -94,9 +99,47 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(dto);
         }
 
-        // PUT: api/Frekwencje/5
+        // ✅ NOWY ENDPOINT - GET: api/Frekwencja/filtrowana?zajeciaId={id}&data={date}
+        // Pobiera frekwencję dla konkretnych zajęć w danym dniu
+        [HttpGet("filtrowana")]
+        [Authorize(Roles = "Admin,Nauczyciel")]
+        public async Task<ActionResult<IEnumerable<FrekwencjaDetailsDto>>> GetFrekwencjaFiltrowana(
+            [FromQuery] int zajeciaId,
+            [FromQuery] string data)
+        {
+            try
+            {
+                if (!DateTime.TryParse(data, out DateTime parsedDate))
+                {
+                    return BadRequest("Nieprawidłowy format daty");
+                }
+
+                var frekwencje = await _frekwencjaRepository.GetAllAsync();
+
+                var filtered = frekwencje
+                    .Where(f => f.ZajeciaId == zajeciaId && f.Data.Date == parsedDate.Date)
+                    .Select(f => new FrekwencjaDetailsDto
+                    {
+                        Id = f.Id,
+                        Data = f.Data,
+                        Status = f.Status,
+                        UczenId = f.UczenId,
+                        ZajeciaId = f.ZajeciaId
+                    })
+                    .ToList();
+
+                return Ok(filtered);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Wystąpił błąd: {ex.Message}");
+            }
+        }
+
+        // PATCH: api/Frekwencja/{id}
         [HttpPatch("{id}")]
-        public async Task<IActionResult> PutFrekwencja(int id, FrekwencjaUpdateDto dto)
+        [Authorize(Roles = "Admin,Nauczyciel")]
+        public async Task<IActionResult> PatchFrekwencja(int id,[FromBody] FrekwencjaUpdateDto dto)
         {
             var f = await _frekwencjaRepository.GetByIdAsync(id);
             if (f == null)
@@ -129,12 +172,13 @@ namespace Dziennik_elektroniczny.Controllers
             _frekwencjaRepository.Update(f);
             await _frekwencjaRepository.SaveChangesAsync();
 
-            return Ok("Zaktualizowano frekwencję.");
+            return Ok(new { message = "Zaktualizowano frekwencję." });
         }
 
-        // POST: api/Frekwencje
+        // POST: api/Frekwencja
         [HttpPost]
-        public async Task<ActionResult<FrekwencjaCreateDto>> PostFrekwencja(FrekwencjaCreateDto dto)
+        [Authorize(Roles = "Admin,Nauczyciel")]
+        public async Task<ActionResult<FrekwencjaDto>> PostFrekwencja([FromBody]  FrekwencjaCreateDto dto)
         {
             var uczen = await _uzytkownikRepository.GetByIdAsync(dto.UczenId);
             if (uczen == null || uczen.Rola != Rola.Uczen)
@@ -158,13 +202,14 @@ namespace Dziennik_elektroniczny.Controllers
             return CreatedAtAction(nameof(GetFrekwencja), new { id = f.Id }, f);
         }
 
-        // DELETE: api/Frekwencje/5
+        // DELETE: api/Frekwencja/{id}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,Nauczyciel")]
         public async Task<IActionResult> DeleteFrekwencja(int id)
         {
             var frekwencja = await _frekwencjaRepository.GetByIdAsync(id);
             if (frekwencja == null)
-                return NotFound(new ErrorResponse { Errors = new List<string> {"Nie znaleziono frekwencji."}});
+                return NotFound(new ErrorResponse { Errors = new List<string> { "Nie znaleziono frekwencji." } });
 
             _frekwencjaRepository.Delete(frekwencja);
             var result = await _frekwencjaRepository.SaveChangesAsync();
@@ -172,7 +217,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć rekordu.");
 
-            return Ok(new {message = "Usunięto klasę pomyślnie"});
+            return Ok(new { message = "Usunięto frekwencję pomyślnie" });
         }
     }
 }

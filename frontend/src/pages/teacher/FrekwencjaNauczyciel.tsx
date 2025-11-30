@@ -1,225 +1,276 @@
-// pages/teacher/FrekwencjaNauczyciel.tsx
+// pages/teacher/FrekwencjaNauczyciel.tsx - WERSJA Z LICZBAMI
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  getUczniowieDlaZajec, 
+  getFrekwencjaByZajeciaAndDate, 
+  updateFrekwencja, 
+  createFrekwencja, 
+  getZajeciaNauczyciela 
+} from '../../api/FrekwencjaService';
 import { Uzytkownik } from '../../types/Uzytkownik'; 
-import { FrekwencjaCreateDto, FrekwencjaDetailsDto, FrekwencjaUpdateDto, StatusFrekwencji } from '../../types/Frekwencja';
-import { getUczniowieDlaZajec, getFrekwencjaByZajeciaAndDate, updateFrekwencja, createFrekwencja, getZajeciaNauczyciela } from '../../api/FrekwencjaService';
+import { 
+  FrekwencjaCreateDto, 
+  StatusFrekwencji, 
+  getPolishStatusName,
+  ALL_STATUSES 
+} from '../../types/Frekwencja';
 import { UczenFrekwencja, ZajeciaDetails } from '../../types/Zajecia';
 
-
-// 1. Zdefiniuj typ dla stanu frekwencji (łączy ucznia z jego statusem)
-interface FrekwencjaState extends UczenFrekwencja {
-  status: StatusFrekwencji;
-  frekwencjaId?: number; // Opcjonalne: ID jeśli rekord już istnieje w bazie
+interface FrekwencjaRowState extends UczenFrekwencja {
+  status: StatusFrekwencji; // Liczba 0-3
+  frekwencjaId?: number;
+  isDirty: boolean;
 }
+
+const getStatusColor = (status: StatusFrekwencji) => {
+  switch (status) {
+    case StatusFrekwencji.OBECNY: 
+      return 'text-green-600 bg-green-50 border-green-200';
+    case StatusFrekwencji.NIEOBECNY: 
+      return 'text-red-600 bg-red-50 border-red-200';
+    case StatusFrekwencji.SPOZNIONY: 
+      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    case StatusFrekwencji.USPRAWIEDLIWIONY: 
+      return 'text-blue-600 bg-blue-50 border-blue-200';
+    default: 
+      return 'text-gray-600 bg-gray-50 border-gray-200';
+  }
+};
 
 export default function FrekwencjaNauczyciel() {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Stan przechowujący wybrane zajęcia (np. Matma, 1A, 8:00)
-  const [zajecia, setZajecia] = useState<ZajeciaDetails[]>([]);
+  const [zajeciaList, setZajeciaList] = useState<ZajeciaDetails[]>([]);
   const [selectedZajeciaId, setSelectedZajeciaId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  // Stan przechowujący listę uczniów z ich statusami frekwencji
-  const [frekwencjaData, setFrekwencjaData] = useState<FrekwencjaState[]>([]);
+  const [rows, setRows] = useState<FrekwencjaRowState[]>([]);
   
-  // Mock nauczyciela (W PRAWIDŁOWYM KODZIE POWINIEN PRZYJŚĆ PRZEZ PROPS LUB ZOSTAĆ POBRANY Z LOCALSTORAGE)
   const user: Uzytkownik = useMemo(() => {
     const u = localStorage.getItem('user');
-    return u ? JSON.parse(u) : { id: 1, imie: "Mock", nazwisko: "Nauczyciel" }; // Mock ID
+    return u ? JSON.parse(u) : { id: 1, imie: "Jan", nazwisko: "Kowalski" };
   }, []);
   
-  // ----------------------------------------------------
-  // I. Efekt ładowania zajęć dla nauczyciela
-  // ----------------------------------------------------
   useEffect(() => {
     async function loadZajecia() {
       try {
-        const loadedZajecia = await getZajeciaNauczyciela(user.id);
-        setZajecia(loadedZajecia);
-        if (loadedZajecia.length > 0) {
-          setSelectedZajeciaId(loadedZajecia[0].id); // Wybierz pierwsze zajęcia domyślnie
+        const data = await getZajeciaNauczyciela(user.id);
+        setZajeciaList(data);
+        if (data.length > 0) {
+          setSelectedZajeciaId(data[0].id);
         }
       } catch (err: any) {
-        setError(`Błąd ładowania zajęć: ${err.message}`);
+        setError("Nie udało się pobrać listy zajęć.");
       }
     }
     loadZajecia();
   }, [user.id]);
   
-  // ----------------------------------------------------
-  // II. Efekt ładowania uczniów i frekwencji
-  // ----------------------------------------------------
   useEffect(() => {
     if (!selectedZajeciaId) return;
 
-    async function loadAttendance() {
+    async function fetchData() {
       setLoading(true);
       setError(null);
       try {
-        // 1. Pobierz uczniów dla wybranych zajęć
-        const uczniowie = await getUczniowieDlaZajec(selectedZajeciaId!);
-        // 2. Pobierz istniejącą frekwencję dla tej daty i zajęć
-        const existingFrekwencja = await getFrekwencjaByZajeciaAndDate(selectedZajeciaId!, selectedDate);
+        const [uczniowie, existingFrekwencja] = await Promise.all([
+          getUczniowieDlaZajec(selectedZajeciaId!),
+          getFrekwencjaByZajeciaAndDate(selectedZajeciaId!, selectedDate)
+        ]);
         
-        // 3. Połącz dane: uczeń + status
-       const combinedData: FrekwencjaState[] = uczniowie.map((uczen: UczenFrekwencja) => { 
-          const frek = existingFrekwencja.find((f: FrekwencjaDetailsDto) => f.uczenId === uczen.id); // Typ F już naprawiony
+        const mergedData: FrekwencjaRowState[] = uczniowie.map((uczen: UczenFrekwencja) => { 
+          const existingRecord = existingFrekwencja.find((f: any) => f.uczenId === uczen.id);
           
           return {
             ...uczen,
-            status: frek ? frek.status : "Obecny", 
-            frekwencjaId: frek?.id,
+            status: existingRecord ? existingRecord.status : StatusFrekwencji.OBECNY, // = 1
+            frekwencjaId: existingRecord ? existingRecord.id : undefined,
+            isDirty: false
           };
         });
 
-        setFrekwencjaData(combinedData);
+        mergedData.sort((a, b) => a.nazwisko.localeCompare(b.nazwisko));
+        setRows(mergedData);
       } catch (err: any) {
-        setError(`Błąd ładowania danych: ${err.message}`);
+        console.error(err);
+        setError("Wystąpił błąd podczas pobierania listy obecności.");
       } finally {
         setLoading(false);
       }
     }
 
-    loadAttendance();
+    fetchData();
   }, [selectedZajeciaId, selectedDate]);
 
-
-  // ----------------------------------------------------
-  // III. Handlery
-  // ----------------------------------------------------
-
   const handleStatusChange = (uczenId: number, newStatus: StatusFrekwencji) => {
-    setFrekwencjaData(prevData =>
-      prevData.map(f => 
-        f.id === uczenId ? { ...f, status: newStatus } : f
-      )
-    );
+    setRows(prev => prev.map(row => 
+      row.id === uczenId ? { ...row, status: newStatus, isDirty: true } : row
+    ));
   };
-  
-  const handleSave = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (!selectedZajeciaId) return;
 
-      const results = frekwencjaData.map(async (f: FrekwencjaState) => {
+  const markAllPresent = () => {
+    setRows(prev => prev.map(row => ({ 
+      ...row, 
+      status: StatusFrekwencji.OBECNY, // = 1
+      isDirty: true 
+    })));
+  };
+
+  const handleSave = async () => {
+    if (!selectedZajeciaId) return;
+    setSaving(true);
+    
+    try {
+      const promises = rows.map(async (row) => {
         const dto: FrekwencjaCreateDto = {
           data: selectedDate,
-          status: f.status,
-          uczenId: f.id,
+          status: row.status, // Wysyła liczbę (0, 1, 2, 3)
+          uczenId: row.id,
           zajeciaId: selectedZajeciaId,
         };
 
-        if (f.frekwencjaId) {
-          // Rekord istnieje -> Aktualizuj (PATCH)
-          await updateFrekwencja(f.frekwencjaId, { status: f.status });
+        if (row.frekwencjaId) {
+          await updateFrekwencja(row.frekwencjaId, { status: row.status, data: selectedDate });
         } else {
-          // Rekord nie istnieje -> Utwórz (POST)
           await createFrekwencja(dto);
         }
       });
 
-      await Promise.all(results);
-      alert("Frekwencja zapisana pomyślnie!");
-      // Po zapisie, ponownie załaduj dane, aby zaktualizować frekwencjaId
-      // (ponowne uruchomienie useEffect II)
-      setSelectedZajeciaId(selectedZajeciaId); 
-
+      await Promise.all(promises);
+      alert("Zapisano pomyślnie!");
+      window.location.reload(); 
     } catch (err: any) {
-      setError(`Błąd zapisu frekwencji: ${err.message}`);
+      alert("Błąd zapisu: " + err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (error) return <div className="p-4 bg-red-100 text-red-700 rounded">Błąd: {error}</div>;
+  if (error) return (
+    <div className="p-4 m-4 bg-red-100 border border-red-400 text-red-700 rounded">
+      {error}
+    </div>
+  );
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">📊 Wystawianie frekwencji</h2>
+    <div className="max-w-5xl mx-auto p-4">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Dziennik Lekcyjny</h1>
+        <p className="text-gray-500">Panel sprawdzania obecności</p>
+      </header>
       
-      {/* SEKCJA WYBORU */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6 flex space-x-4 items-center">
-        
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <label className="flex flex-col">
-          <span className="text-sm font-medium mb-1">Wybierz datę:</span>
+          <span className="text-sm font-semibold text-gray-700 mb-1">Data zajęć</span>
           <input 
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="p-2 border rounded"
-            disabled={loading}
+            className="p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
         </label>
 
         <label className="flex flex-col">
-          <span className="text-sm font-medium mb-1">Wybierz zajęcia:</span>
+          <span className="text-sm font-semibold text-gray-700 mb-1">Wybierz przedmiot i klasę</span>
           <select 
             value={selectedZajeciaId ?? ''}
             onChange={(e) => setSelectedZajeciaId(Number(e.target.value))}
-            className="p-2 border rounded"
-            disabled={loading || zajecia.length === 0}
+            className="p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+            disabled={zajeciaList.length === 0}
           >
-            {zajecia.length === 0 ? (
-                <option value="">Brak dostępnych zajęć</option>
-            ) : (
-                zajecia.map(z => (
-                  <option key={z.id} value={z.id}>
-                    {z.przedmiot} ({z.grupa}) - {z.godzina}
-                  </option>
-                ))
-            )}
+             {zajeciaList.length === 0 ? <option>Brak zajęć</option> : null}
+             {zajeciaList.map(z => (
+               <option key={z.id} value={z.id}>
+                 {z.przedmiot} — Klasa {z.grupa || 'A'} ({z.godzina})
+               </option>
+             ))}
           </select>
         </label>
+
+        <div className="flex justify-end pb-1">
+            <button 
+                onClick={markAllPresent}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+                disabled={loading || rows.length === 0}
+            >
+                Zaznacz wszystkich obecnych
+            </button>
+        </div>
       </div>
 
-      {/* SEKCJA TABELI FREKWENCJI */}
-      <div className="bg-white p-4 rounded-xl shadow">
-        
-        {loading && <div className="text-center py-8">Ładowanie frekwencji...</div>}
-        
-        {!loading && frekwencjaData.length > 0 && (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100 border-b border-gray-300">
-                <th className="p-3 border text-left">L.p.</th>
-                <th className="p-3 border text-left">Uczeń</th>
-                <th className="p-3 border text-center">Status</th>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="p-10 text-center text-gray-500">Ładowanie listy uczniów...</div>
+        ) : rows.length === 0 ? (
+           <div className="p-10 text-center text-gray-500">Brak uczniów przypisanych do tych zajęć.</div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-16">Lp.</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Uczeń</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Status obecności</th>
               </tr>
             </thead>
-
-            <tbody>
-              {frekwencjaData.map((f, index) => (
-                <tr key={f.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="border p-3 w-10">{index + 1}</td>
-                  <td className="border p-3 font-medium">{f.imie} {f.nazwisko}</td>
-                  <td className="border p-3 text-center w-40">
-                    <select 
-                      value={f.status} 
-                      onChange={(e) => handleStatusChange(f.id, e.target.value as StatusFrekwencji)}
-                      className="p-1 border rounded"
-                    >
-                      {/* Generujemy opcje na podstawie StatusFrekwencji */}
-                      {['Obecny', 'Nieobecny', 'Spóźnienie', 'Usprawiedliwiony', 'Nieusprawiedliwiony'].map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row, index) => (
+                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-gray-400 font-mono text-sm">
+                    {index + 1}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                        {row.imie[0]}{row.nazwisko[0]}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-800">{row.nazwisko} {row.imie}</span>
+                        <span className="text-xs text-gray-400">ID: {row.id}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="inline-block relative">
+                        {/* ✅ WAŻNE: Number(e.target.value) konwertuje string na liczbę */}
+                        <select 
+                        value={row.status}
+                        onChange={(e) => handleStatusChange(row.id, Number(e.target.value) as StatusFrekwencji)}
+                        className={`appearance-none py-2 pl-3 pr-8 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer ${getStatusColor(row.status)}`}
+                        >
+                            {ALL_STATUSES.map(status => (
+                              <option key={status} value={status}>
+                                {getPolishStatusName(status)}
+                              </option>
+                            ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+      </div>
 
+      <div className="mt-6 flex justify-end">
         <button 
           onClick={handleSave}
-          className="bg-purple-600 text-white mt-4 px-4 py-2 rounded hover:bg-purple-700 disabled:opacity-50"
-          disabled={loading || !selectedZajeciaId || frekwencjaData.length === 0}
+          disabled={loading || saving || rows.length === 0}
+          className={`
+            px-6 py-3 rounded-lg text-white font-semibold shadow-lg transition-all
+            ${saving || loading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5'
+            }
+          `}
         >
-          {loading ? "Zapisywanie..." : "Zapisz frekwencję"}
+          {saving ? 'Zapisywanie...' : 'Zapisz zmiany'}
         </button>
       </div>
     </div>

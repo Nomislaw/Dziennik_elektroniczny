@@ -1,32 +1,132 @@
 ﻿using Dziennik_elektroniczny.DTOs.ZajeciaDto;
-using Dziennik_elektroniczny.Interfaces; // ZMIANA: Nowy using
+using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-// using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
-// using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
-using System.Collections.Generic; // Dodane dla IEnumerable
-using System.Threading.Tasks; // Dodane dla Task
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace Dziennik_elektroniczny.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // ✅ Dodana autoryzacja dla wszystkich endpointów
     public class ZajeciaController : ControllerBase
     {
-        // ZMIANA: z AppDbContext na IGenericRepository<Zajecia>
         private readonly IGenericRepository<Zajecia> _zajeciaRepository;
         private readonly IUzytkownikService _uzytkownikRepository;
+        private readonly IGenericRepository<Plan> _planRepository;
 
-        public ZajeciaController(IGenericRepository<Zajecia> zajeciaRepository, IUzytkownikService uzytkownikRepository) // ZMIANA
+        public ZajeciaController(
+            IGenericRepository<Zajecia> zajeciaRepository,
+            IUzytkownikService uzytkownikRepository,
+            IGenericRepository<Plan> planRepository)
         {
             _zajeciaRepository = zajeciaRepository;
             _uzytkownikRepository = uzytkownikRepository;
+            _planRepository = planRepository;
+        }
+
+        [HttpGet("nauczyciel/{nauczycielId}")]
+        [Authorize(Roles = "Admin,Nauczyciel")]
+        public async Task<ActionResult<IEnumerable<ZajeciaDetailsDto>>> GetZajeciaNauczyciela(int nauczycielId)
+        {
+            try
+            {
+                var zajecia = await _zajeciaRepository.GetAllWithIncludesAsync(
+                    "Przedmiot",
+                    "Plan.Klasa",
+                    "Sala"
+                );
+
+                var zajeciaNauczyciela = zajecia
+                    .Where(z => z.NauczycielId == nauczycielId)
+                    .OrderBy(z => z.Plan != null ? (int)z.Plan.DzienTygodnia : 7) // ✅ PRZED Select
+                    .ThenBy(z => z.GodzinaRozpoczecia) // ✅ PRZED Select
+                    .Select(z => new ZajeciaDetailsDto
+                    {
+                        Id = z.Id,
+                        Przedmiot = z.Przedmiot != null ? z.Przedmiot.Nazwa : "Brak przedmiotu",
+                        Grupa = z.Plan?.Klasa != null ? z.Plan.Klasa.Nazwa : "Brak klasy",
+                        Godzina = $"{z.GodzinaRozpoczecia}-{z.GodzinaZakonczenia}",
+                        Sala = z.Sala != null ? z.Sala.Numer : "Brak sali",
+                        DzienTygodnia = z.Plan != null ? GetPolishDayName((DayOfWeek)z.Plan.DzienTygodnia) : "Nieznany"
+                    })
+                    .ToList();
+
+                return Ok(zajeciaNauczyciela);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Wystąpił błąd: {ex.Message}");
+            }
+        }
+
+        // ========== ENDPOINT 2: Uczniowie dla zajęć ==========
+        [HttpGet("{zajeciaId}/uczniowie")]
+        [Authorize(Roles = "Admin,Nauczyciel")]
+        public async Task<ActionResult<IEnumerable<UczenFrekwencjaDto>>> GetUczniowieDlaZajec(int zajeciaId)
+        {
+            try
+            {
+                var zajecia = await _zajeciaRepository.GetByIdWithIncludesAsync(
+                    zajeciaId,
+                    "Plan.Klasa"
+                );
+
+                if (zajecia == null)
+                {
+                    return NotFound("Nie znaleziono zajęć.");
+                }
+
+                if (zajecia.Plan?.Klasa == null)
+                {
+                    return BadRequest("Zajęcia nie mają przypisanej klasy.");
+                }
+
+                var uczniowie = await _uzytkownikRepository.GetAllAsync();
+
+                var uczniowieWKlasie = uczniowie
+                    .Where(u => u.Rola == Rola.Uczen && u.KlasaId == zajecia.Plan.Klasa.Id)
+                    .Select(u => new UczenFrekwencjaDto
+                    {
+                        Id = u.Id,
+                        Imie = u.Imie,
+                        Nazwisko = u.Nazwisko,
+                        Email = u.Email
+                    })
+                    .OrderBy(u => u.Nazwisko)
+                    .ThenBy(u => u.Imie)
+                    .ToList();
+
+                return Ok(uczniowieWKlasie);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Wystąpił błąd: {ex.Message}");
+            }
+        }
+
+        // ========== METODA POMOCNICZA: Polskie nazwy dni ==========
+        private string GetPolishDayName(DayOfWeek dayOfWeek)
+        {
+            return dayOfWeek switch
+            {
+                DayOfWeek.Monday => "Poniedziałek",
+                DayOfWeek.Tuesday => "Wtorek",
+                DayOfWeek.Wednesday => "Środa",
+                DayOfWeek.Thursday => "Czwartek",
+                DayOfWeek.Friday => "Piątek",
+                DayOfWeek.Saturday => "Sobota",
+                DayOfWeek.Sunday => "Niedziela",
+                _ => "Nieznany"
+            };
         }
 
         // GET: api/Zajecia
         [HttpGet]
+        [Authorize(Roles = "Admin,Nauczyciel")]
         public async Task<ActionResult<IEnumerable<ZajeciaDto>>> GetZajecia()
         {
             var zajecia = await _zajeciaRepository.GetAllWithIncludesAsync(
@@ -57,6 +157,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // GET: api/Zajecia/5
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Nauczyciel,Uczen")]
         public async Task<ActionResult<ZajeciaDto>> GetZajecia(int id)
         {
             var zajecia = await _zajeciaRepository.GetByIdWithIncludesAsync(
@@ -94,8 +195,9 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(dto);
         }
 
-        // Patch: api/Zajecia/5
+        // PATCH: api/Zajecia/5
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> PatchZajecia(int id, ZajeciaUpdateDto dto)
         {
             var zajecia = await _zajeciaRepository.GetByIdAsync(id);
@@ -133,11 +235,12 @@ namespace Dziennik_elektroniczny.Controllers
             _zajeciaRepository.Update(zajecia);
             await _zajeciaRepository.SaveChangesAsync();
 
-            return Ok(new { message = "Zaktualizowano zajecia" });
+            return Ok(new { message = "Zaktualizowano zajęcia" });
         }
 
         // POST: api/Zajecia
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Zajecia>> PostZajecia(ZajeciaCreateDto dto)
         {
             var nauczyciel = await _uzytkownikRepository.GetByIdAsync(dto.NauczycielId);
@@ -165,9 +268,9 @@ namespace Dziennik_elektroniczny.Controllers
 
         // DELETE: api/Zajecia/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteZajecia(int id)
         {
-            // ZMIANA: Logika usuwania jak w ZadanieController
             var zajecia = await _zajeciaRepository.GetByIdAsync(id);
             if (zajecia == null)
             {
@@ -180,7 +283,7 @@ namespace Dziennik_elektroniczny.Controllers
             if (!result)
                 return StatusCode(500, "Nie udało się usunąć zajęć.");
 
-            return Ok(new { message = "Usunieto zajecie" });
+            return Ok(new { message = "Usunięto zajęcia" });
         }
     }
 }

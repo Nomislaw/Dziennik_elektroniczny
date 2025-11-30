@@ -1,18 +1,14 @@
-// src/types/Frekwencja.ts
+export enum StatusFrekwencji {
+  NIEOBECNY = 0,
+  OBECNY = 1,
+  SPOZNIONY = 2,
+  USPRAWIEDLIWIONY = 3
+}
 
-// Typy muszą być zgodne z enum Status z C#
-export type StatusFrekwencji = 
-    "Obecny" | 
-    "Nieobecny" | 
-    "Spóźnienie" | 
-    "Usprawiedliwiony" | 
-    "Nieusprawiedliwiony";
-
-// Odpowiednik FrekwencjaDto
 export interface FrekwencjaDetailsDto {
     id: number;
-    data: string; // ISO date string
-    status: StatusFrekwencji;
+    data: string;
+    status: StatusFrekwencji; // Liczba 0-3
     
     uczenId: number;
     uczenImieNazwisko: string;
@@ -23,18 +19,35 @@ export interface FrekwencjaDetailsDto {
     salaNazwa: string;
 }
 
-// Odpowiednik FrekwencjaCreateDto
 export interface FrekwencjaCreateDto {
-    data: string; // ISO date string
-    status: StatusFrekwencji;
+    data: string;
+    status: StatusFrekwencji; // Liczba 0-3
     uczenId: number;
     zajeciaId: number;
 }
 
-// Odpowiednik FrekwencjaUpdateDto
 export interface FrekwencjaUpdateDto {
     data?: string;
-    status?: StatusFrekwencji;
+    status?: StatusFrekwencji; // Liczba 0-3
     uczenId?: number;
     zajeciaId?: number;
 }
+
+// ✅ Funkcja pomocnicza - wyświetlanie po polsku
+export const getPolishStatusName = (status: StatusFrekwencji): string => {
+    switch (status) {
+        case StatusFrekwencji.OBECNY: return "Obecny";
+        case StatusFrekwencji.NIEOBECNY: return "Nieobecny";
+        case StatusFrekwencji.SPOZNIONY: return "Spóźniony";
+        case StatusFrekwencji.USPRAWIEDLIWIONY: return "Usprawiedliwiony";
+        default: return "Nieznany";
+    }
+};
+
+// ✅ Wszystkie statusy jako tablica
+export const ALL_STATUSES: StatusFrekwencji[] = [
+    StatusFrekwencji.OBECNY,
+    StatusFrekwencji.NIEOBECNY,
+    StatusFrekwencji.SPOZNIONY,
+    StatusFrekwencji.USPRAWIEDLIWIONY
+];
