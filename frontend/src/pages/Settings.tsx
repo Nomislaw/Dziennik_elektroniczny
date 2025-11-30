@@ -65,19 +65,13 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-6 bg-blue-50 min-h-screen">
-      <button
-        onClick={() => navigate("/dashboard")}
-        className="mb-4 px-4 py-2 bg-blue-500 text-white font-semibold rounded-full hover:bg-blue-600 transition-colors duration-200"
-      >
-        ← Powrót do strony głównej
-      </button>
+    <div className="p-0"> 
 
-      <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
+      <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
 
-      {msg && (
-        <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>
-      )}
+      {msg && (
+        <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>
+      )}
 
       <div className="mb-4 space-x-2">
         <button

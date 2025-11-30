@@ -20,20 +20,29 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const user: Uzytkownik = await login(form.email, form.password);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("token", user.token);
-      console.log("Zalogowano użytkownika:", user);
-  
-      if (user.rola === "Administrator") {
-          router("/admin");
-          } else if (user.rola === "Nauczyciel") {
-            router("/teacher");
-          }
-           else {
-          router("/dashboard");
-          }
-    } catch (err: any) {
+     const user: Uzytkownik = await login(form.email, form.password);
+     localStorage.setItem("user", JSON.stringify(user));
+     localStorage.setItem("token", user.token);
+     console.log("Zalogowano użytkownika:", user);
+ // Zmieniamy logikę przekierowania w zależności od roli
+    switch (user.rola) {
+      case "Administrator":
+         router("/admin");
+         break;
+       case "Nauczyciel":
+         router("/teacher");
+         break;
+      case "Uczen": // Dodajemy jawne przekierowanie dla Ucznia
+         router("/student");
+         break;
+      case "Rodzic": // Dodaj obsługę dla Rodzica, jeśli planujesz jego panel
+         router("/parent"); // Załóżmy, że będzie /parent
+         break;
+       default:
+        router("/student"); // Domyślne przekierowanie, jeśli rola nieznana
+     }
+
+} catch (err: any) {
       setError(err.message || "Błąd logowania");
     } finally {
       setLoading(false);

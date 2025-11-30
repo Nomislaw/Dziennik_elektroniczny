@@ -22,7 +22,7 @@ console.log("allowedRoles:", allowedRoles);
 
   if (!allowedRoles.includes(user.rola)) {
     // jeżeli ma rolę ucznia → do panelu ucznia
-    if (user.rola === "Uczen") return <Navigate to="/dashboard" />;
+    if (user.rola === "Uczen") return <Navigate to="/student" />; // <--- ZMIENIONE NA /student!
 
     // jeżeli admin → do admina
     if (user.rola === "Administrator") return <Navigate to="/admin" />;

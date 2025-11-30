@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Uzytkownik } from "../types/Uzytkownik";
 import OcenyNauczyciel from "../pages/teacher/OcenyNauczyciel";
 import FrekwencjaNauczyciel from "../pages/teacher/FrekwencjaNauczyciel";
+import Settings from "../pages/Settings"; 
 
 export default function TeacherPanel() {
   const navigate = useNavigate();
@@ -56,8 +57,10 @@ export default function TeacherPanel() {
           </button>
 
           <button
-            onClick={() => navigate("/settings")}
-            className="w-full text-left px-4 py-2 rounded-lg hover:bg-purple-600"
+            onClick={() => setActiveTab("settings")} 
+            className={`w-full text-left px-4 py-2 rounded-lg hover:bg-purple-600 ${
+              activeTab === "settings" ? "bg-purple-600" : "" 
+            }`}
           >
             ⚙️ Ustawienia
           </button>
@@ -78,9 +81,10 @@ export default function TeacherPanel() {
 
       {/* Main content */}
       <main className="flex-1 p-6 overflow-y-auto">
-  {activeTab === "oceny" && <OcenyNauczyciel nauczyciel={user} />}
-  {activeTab === "frekwencja" && <FrekwencjaNauczyciel />}
-</main>
+        {activeTab === "oceny" && <OcenyNauczyciel nauczyciel={user} />}
+        {activeTab === "frekwencja" && <FrekwencjaNauczyciel />}
+        {activeTab === "settings" && <Settings />} 
+      </main>
 
     </div>
   );

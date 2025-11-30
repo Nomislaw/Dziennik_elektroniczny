@@ -8,6 +8,7 @@ import AdministratorzyList from "../pages/admin/AdministratorList";
 import SaleList from "../pages/admin/SaleList";
 //import AdministratorzyList from "../pages/admin/AdministratorzyList";
 import PrzedmiotList from "../pages/admin/PrzedmiotList";
+import Settings from "../pages/Settings"; 
 
 
 export default function AdminDashboard() {
@@ -73,8 +74,10 @@ export default function AdminDashboard() {
             🔐 Administratorzy
           </button>
           <button
-            onClick={() => navigate("/settings")}
-            className="w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600"
+            onClick={() => setActiveTab("settings")} 
+            className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+              activeTab === "settings" ? "bg-teal-600" : ""
+            }`}
           >
             ⚙️ Ustawienia
           </button>
@@ -133,6 +136,7 @@ export default function AdminDashboard() {
           {activeTab === "administratorzy" && <AdministratorzyList />}
           {activeTab === "sale" && <SaleList />}
           {activeTab === "przedmioty" && <PrzedmiotList />}
+          {activeTab === "settings" && <Settings />}
 
 
         </div>
