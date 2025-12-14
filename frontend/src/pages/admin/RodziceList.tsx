@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow, zmienRoleUzytkownika,aktywujUzytkownika,
+import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow, zmienRoleUzytkownika, aktywujUzytkownika,
   wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Rodzic = {
@@ -8,7 +8,7 @@ type Rodzic = {
   nazwisko: string;
   email: string;
   czyEmailPotwierdzony: boolean;
-   rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
+  rola: "Administrator" | "Nauczyciel" | "Rodzic" | "Uczen";
   dzieci?: { id: number; imie: string; nazwisko: string; klasaNazwa?: string }[];
 };
 
@@ -25,6 +25,7 @@ export default function RodziceList() {
     nazwisko: "",
     email: "",
     haslo: "",
+    hasloPowtorz: "",
     dzieciIds: [] as number[],
   });
 
@@ -33,39 +34,39 @@ export default function RodziceList() {
   }, []);
 
   const loadData = async () => {
-  try {
-    setLoading(true); // ✅ Ustaw loading na początku
-    const [rodziceData, uczniowieData] = await Promise.all([
-      pobierzRodzicow(),
-      pobierzUczniow(),
-    ]);
-    setRodzice(rodziceData);
-    setUczniowie(uczniowieData);
-  } catch (err) {
-    console.error("Błąd ładowania danych:", err);
-    alert("Błąd podczas ładowania danych"); // ✅ Poinformuj użytkownika
-  } finally {
-    setLoading(false);
-  }
-};
- const handleRoleChange = async (id: number, nowaRola: string) => {
-      try {
-        await zmienRoleUzytkownika(id.toString(), nowaRola);
-        setRodzice((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
-        );
-        alert("Rola została zmieniona.");
-        loadData();
-      } catch (err: any) {
-        console.error(err);
-        alert(err?.message || "Nie udało się zmienić roli.");
-      }
-    };
-  
-    const handleActiveUser = async (id: number) => {
+    try {
+      setLoading(true);
+      const [rodziceData, uczniowieData] = await Promise.all([
+        pobierzRodzicow(),
+        pobierzUczniow(),
+      ]);
+      setRodzice(rodziceData);
+      setUczniowie(uczniowieData);
+    } catch (err) {
+      console.error("Błąd ładowania danych:", err);
+      alert("Błąd podczas ładowania danych");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (id: number, nowaRola: string) => {
+    try {
+      await zmienRoleUzytkownika(id.toString(), nowaRola);
+      setRodzice((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, rola: nowaRola as any } : a))
+      );
+      alert("Rola została zmieniona.");
+      loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Nie udało się zmienić roli.");
+    }
+  };
+
+  const handleActiveUser = async (id: number) => {
     const user = rodzice.find((u) => u.id === id);
     if (!user) return;
-
     if (!window.confirm("Na pewno chcesz aktywować to konto?")) return;
 
     try {
@@ -80,7 +81,6 @@ export default function RodziceList() {
   const handleSendTokenToUser = async (id: number) => {
     const user = rodzice.find((u) => u.id === id);
     if (!user) return;
-
     if (!window.confirm("Na pewno chcesz wysłać token do użytkownika?")) return;
 
     try {
@@ -106,8 +106,13 @@ export default function RodziceList() {
   };
 
   const handleAdd = async () => {
-    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || formData.dzieciIds.length === 0) {
+    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || !formData.hasloPowtorz || formData.dzieciIds.length === 0) {
       alert("Wypełnij wszystkie pola i wybierz co najmniej jedno dziecko!");
+      return;
+    }
+
+    if (formData.haslo !== formData.hasloPowtorz) {
+      alert("Hasła nie są identyczne!");
       return;
     }
 
@@ -128,6 +133,11 @@ export default function RodziceList() {
 
     if (formData.dzieciIds.length === 0) {
       alert("Rodzic musi mieć przypisane co najmniej jedno dziecko!");
+      return;
+    }
+
+    if (formData.haslo && formData.haslo !== formData.hasloPowtorz) {
+      alert("Hasła nie są identyczne!");
       return;
     }
 
@@ -155,6 +165,7 @@ export default function RodziceList() {
       nazwisko: rodzic.nazwisko,
       email: rodzic.email,
       haslo: "",
+      hasloPowtorz: "",
       dzieciIds: rodzic.dzieci?.map((d) => d.id) || [],
     });
     setViewMode("edit");
@@ -170,7 +181,7 @@ export default function RodziceList() {
   };
 
   const resetForm = () => {
-    setFormData({ imie: "", nazwisko: "", email: "", haslo: "", dzieciIds: [] });
+    setFormData({ imie: "", nazwisko: "", email: "", haslo: "", hasloPowtorz: "", dzieciIds: [] });
     setSelectedRodzic(null);
   };
 
@@ -178,6 +189,7 @@ export default function RodziceList() {
 
   return (
     <div>
+      {/* LISTA RODZICÓW */}
       {viewMode === "list" && (
         <>
           <div className="flex justify-between items-center mb-4">
@@ -211,7 +223,7 @@ export default function RodziceList() {
                       <div className="font-medium text-gray-900">{r.imie} {r.nazwisko}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.email}</td>
-                     <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <select
                         value={r.rola}
                         onChange={(e) => handleRoleChange(r.id, e.target.value)}
@@ -262,23 +274,22 @@ export default function RodziceList() {
                       >
                         🗑 Usuń
                       </button>
-                       {r.czyEmailPotwierdzony === false && (
+                      {!r.czyEmailPotwierdzony && (
+                        <>
                           <button
                             className="text-blue-600 hover:text-blue-800"
                             onClick={() => handleActiveUser(r.id)}
                           >
                             ✅ Aktywuj
                           </button>
-                        )}
-
-                        {r.czyEmailPotwierdzony === false && (
                           <button
                             className="text-blue-600 hover:text-blue-800"
                             onClick={() => handleSendTokenToUser(r.id)}
                           >
                             📩 Wyślij token
                           </button>
-                        )}
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -288,146 +299,70 @@ export default function RodziceList() {
         </>
       )}
 
+      {/* DODAWANIE */}
       {viewMode === "add" && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Dodaj nowego rodzica</h2>
           <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Imię *"
-              value={formData.imie}
-              onChange={(e) => setFormData({ ...formData, imie: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
-            <input
-              type="text"
-              placeholder="Nazwisko *"
-              value={formData.nazwisko}
-              onChange={(e) => setFormData({ ...formData, nazwisko: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
-            <input
-              type="email"
-              placeholder="Email *"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
-            <input
-              type="password"
-              placeholder="Hasło *"
-              value={formData.haslo}
-              onChange={(e) => setFormData({ ...formData, haslo: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
+            <input type="text" placeholder="Imię *" value={formData.imie} onChange={(e) => setFormData({ ...formData, imie: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="text" placeholder="Nazwisko *" value={formData.nazwisko} onChange={(e) => setFormData({ ...formData, nazwisko: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="email" placeholder="Email *" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="password" placeholder="Hasło *" value={formData.haslo} onChange={(e) => setFormData({ ...formData, haslo: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="password" placeholder="Powtórz hasło *" value={formData.hasloPowtorz} onChange={(e) => setFormData({ ...formData, hasloPowtorz: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Wybierz dzieci * (co najmniej jedno)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Wybierz dzieci * (co najmniej jedno)</label>
               <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
                 {uczniowie.map((u) => (
                   <label key={u.id} className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.dzieciIds.includes(u.id)}
-                      onChange={() => toggleDziecko(u.id)}
-                      className="rounded"
-                    />
-                    <span>
-                      {u.imie} {u.nazwisko} {u.klasaNazwa && `(${u.klasaNazwa})`}
-                    </span>
+                    <input type="checkbox" checked={formData.dzieciIds.includes(u.id)} onChange={() => toggleDziecko(u.id)} className="rounded" />
+                    <span>{u.imie} {u.nazwisko} {u.klasaNazwa && `(${u.klasaNazwa})`}</span>
                   </label>
                 ))}
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Wybrano: {formData.dzieciIds.length} {formData.dzieciIds.length === 1 ? "dziecko" : "dzieci"}
-              </p>
+              <p className="text-sm text-gray-500 mt-2">Wybrano: {formData.dzieciIds.length} {formData.dzieciIds.length === 1 ? "dziecko" : "dzieci"}</p>
             </div>
+
             <p className="text-sm text-gray-500">* - pola wymagane</p>
           </div>
           <div className="mt-6 flex gap-2">
-            <button
-              onClick={handleAdd}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              💾 Zapisz
-            </button>
-            <button
-              onClick={() => { setViewMode("list"); resetForm(); }}
-              className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
-            >
-              🔙 Anuluj
-            </button>
+            <button onClick={handleAdd} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">💾 Zapisz</button>
+            <button onClick={() => { setViewMode("list"); resetForm(); }} className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400">🔙 Anuluj</button>
           </div>
         </div>
       )}
 
+      {/* EDYCJA */}
       {viewMode === "edit" && selectedRodzic && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Edytuj rodzica</h2>
           <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Imię"
-              value={formData.imie}
-              onChange={(e) => setFormData({ ...formData, imie: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
-            <input
-              type="text"
-              placeholder="Nazwisko"
-              value={formData.nazwisko}
-              onChange={(e) => setFormData({ ...formData, nazwisko: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full border rounded-lg px-4 py-2"
-            />
+            <input type="text" placeholder="Imię" value={formData.imie} onChange={(e) => setFormData({ ...formData, imie: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="text" placeholder="Nazwisko" value={formData.nazwisko} onChange={(e) => setFormData({ ...formData, nazwisko: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+            <input type="email" placeholder="Email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full border rounded-lg px-4 py-2" />
+           
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Wybierz dzieci (co najmniej jedno)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Wybierz dzieci (co najmniej jedno)</label>
               <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
                 {uczniowie.map((u) => (
                   <label key={u.id} className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.dzieciIds.includes(u.id)}
-                      onChange={() => toggleDziecko(u.id)}
-                      className="rounded"
-                    />
-                    <span>
-                      {u.imie} {u.nazwisko} {u.klasaNazwa && `(${u.klasaNazwa})`}
-                    </span>
+                    <input type="checkbox" checked={formData.dzieciIds.includes(u.id)} onChange={() => toggleDziecko(u.id)} className="rounded" />
+                    <span>{u.imie} {u.nazwisko} {u.klasaNazwa && `(${u.klasaNazwa})`}</span>
                   </label>
                 ))}
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Wybrano: {formData.dzieciIds.length} {formData.dzieciIds.length === 1 ? "dziecko" : "dzieci"}
-              </p>
+              <p className="text-sm text-gray-500 mt-2">Wybrano: {formData.dzieciIds.length} {formData.dzieciIds.length === 1 ? "dziecko" : "dzieci"}</p>
             </div>
           </div>
           <div className="mt-6 flex gap-2">
-            <button
-              onClick={handleEdit}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              💾 Zapisz zmiany
-            </button>
-            <button
-              onClick={() => { setViewMode("list"); resetForm(); }}
-              className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
-            >
-              🔙 Anuluj
-            </button>
+            <button onClick={handleEdit} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">💾 Zapisz zmiany</button>
+            <button onClick={() => { setViewMode("list"); resetForm(); }} className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400">🔙 Anuluj</button>
           </div>
         </div>
       )}
 
+      {/* SZCZEGÓŁY */}
       {viewMode === "details" && selectedRodzic && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Szczegóły rodzica</h2>
@@ -442,20 +377,13 @@ export default function RodziceList() {
                 <strong>Dzieci:</strong>
                 <ul className="list-disc ml-6 mt-2">
                   {selectedRodzic.dzieci.map((d) => (
-                    <li key={d.id}>
-                      {d.imie} {d.nazwisko} {d.klasaNazwa && `(klasa ${d.klasaNazwa})`}
-                    </li>
+                    <li key={d.id}>{d.imie} {d.nazwisko} {d.klasaNazwa && `(klasa ${d.klasaNazwa})`}</li>
                   ))}
                 </ul>
               </div>
             )}
           </div>
-          <button
-            onClick={() => setViewMode("list")}
-            className="mt-4 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
-          >
-            🔙 Wróć
-          </button>
+          <button onClick={() => setViewMode("list")} className="mt-4 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400">🔙 Wróć</button>
         </div>
       )}
     </div>

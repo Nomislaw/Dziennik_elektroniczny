@@ -29,6 +29,7 @@ export default function NauczycieleList() {
     nazwisko: "",
     email: "",
     haslo: "",
+    hasloPowtorz: "",
     wychowawstwoKlasaId: 0,
   });
 
@@ -64,10 +65,15 @@ export default function NauczycieleList() {
   };
 
   const handleAdd = async () => {
-    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo) {
+    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || !formData.hasloPowtorz) {
       alert("Wypełnij wszystkie wymagane pola!");
       return;
     }
+    if (formData.haslo !== formData.hasloPowtorz) {
+  alert("Hasła nie są identyczne!");
+  return;
+}
+
 
     try {
       await dodajNauczyciela({
@@ -111,6 +117,7 @@ export default function NauczycieleList() {
       nazwisko: nauczyciel.nazwisko,
       email: nauczyciel.email,
       haslo: "",
+      hasloPowtorz: "",
       wychowawstwoKlasaId: nauczyciel.wychowawstwoKlasaId || 0,
     });
     setViewMode("edit");
@@ -161,9 +168,10 @@ export default function NauczycieleList() {
   };
 
   const resetForm = () => {
-    setFormData({ imie: "", nazwisko: "", email: "", haslo: "", wychowawstwoKlasaId: 0 });
-    setSelectedNauczyciel(null);
-  };
+  setFormData({ imie: "", nazwisko: "", email: "", haslo: "", hasloPowtorz: "", wychowawstwoKlasaId: 0 });
+  setSelectedNauczyciel(null);
+};
+
 
   if (loading) return <p>Ładowanie danych...</p>;
 
@@ -308,6 +316,14 @@ export default function NauczycieleList() {
               onChange={(e) => setFormData({ ...formData, haslo: e.target.value })}
               className="w-full border rounded-lg px-4 py-2"
             />
+            <input
+              type="password"
+              placeholder="Powtórz hasło *"
+              value={formData.hasloPowtorz}
+              onChange={(e) => setFormData({ ...formData, hasloPowtorz: e.target.value })}
+              className="w-full border rounded-lg px-4 py-2"
+            />
+
             <select
               value={formData.wychowawstwoKlasaId}
               onChange={(e) => setFormData({ ...formData, wychowawstwoKlasaId: Number(e.target.value) })}

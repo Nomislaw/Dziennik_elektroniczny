@@ -115,5 +115,13 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Uzytkownik>()
             .Property(u => u.Rola)
             .HasConversion<string>();
+        
+        modelBuilder.Entity<Uzytkownik>(entity =>
+        {
+            entity.HasIndex(u => u.Email)
+                .IsUnique(); 
+
+            
+        });
     }
 }

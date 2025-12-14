@@ -98,6 +98,15 @@ export default function AdminDashboard() {
   📘 Przedmioty
 </button>
 
+{/* <button
+  onClick={() => setActiveTab("klasy")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "przedmioty" ? "bg-teal-600" : ""
+  }`}
+>
+  📘 Klasy
+</button> */}
+
 
         </nav>
         <div className="p-4 border-t border-teal-600">
@@ -136,6 +145,7 @@ export default function AdminDashboard() {
           {activeTab === "administratorzy" && <AdministratorzyList />}
           {activeTab === "sale" && <SaleList />}
           {activeTab === "przedmioty" && <PrzedmiotList />}
+          {/* {activeTab === "klasy" && <PrzedmiotList />} */}
           {activeTab === "settings" && <Settings />}
 
 

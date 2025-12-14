@@ -19,13 +19,14 @@ namespace Dziennik_elektroniczny.Services
 
         public async Task Delete(int id)
         {
-            var user = _uzytkownikRepository.GetByIdAsync(id).Result;
+            var user = await _uzytkownikRepository.GetByIdAsync(id);
             if (user != null)
             {
                 _uzytkownikRepository.Delete(user);
                 await _uzytkownikRepository.SaveChangesAsync();
             }
         }
+
 
         public async Task<IEnumerable<Uzytkownik>> GetAllAsync()
         {

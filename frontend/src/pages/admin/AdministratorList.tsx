@@ -31,6 +31,7 @@ export default function AdministratorzyList() {
     nazwisko: "",
     email: "",
     haslo: "",
+    powtorzHaslo: "",
   });
 
   useEffect(() => {
@@ -62,13 +63,26 @@ export default function AdministratorzyList() {
   };
 
   const handleAdd = async () => {
-    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo) {
+    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || !formData.powtorzHaslo) {
       alert("Wypełnij wszystkie wymagane pola!");
       return;
     }
 
+    if (formData.haslo !== formData.powtorzHaslo) {
+  alert("Hasła nie są takie same!");
+  return;
+}
+
     try {
-      await dodajAdministratora(formData);
+      const { imie, nazwisko, email, haslo } = formData;
+
+await dodajAdministratora({
+  imie,
+  nazwisko,
+  email,
+  haslo,
+});
+
       alert("Administrator został dodany.");
       loadData();
       setViewMode("list");
@@ -137,12 +151,13 @@ const handleActiveUser = async (id: number) => {
       nazwisko: administrator.nazwisko,
       email: administrator.email,
       haslo: "",
+      powtorzHaslo: "",
     });
     setViewMode("edit");
   };
 
   const resetForm = () => {
-    setFormData({ imie: "", nazwisko: "", email: "", haslo: "" });
+    setFormData({ imie: "", nazwisko: "", email: "", haslo: "" , powtorzHaslo: ""});
     setSelectedAdministrator(null);
   };
 
@@ -320,6 +335,16 @@ const handleActiveUser = async (id: number) => {
               onChange={(e) => setFormData({ ...formData, haslo: e.target.value })}
               className="w-full border rounded-lg px-4 py-2"
             />
+            <input
+              type="password"
+              placeholder="Powtórz hasło *"
+              value={formData.powtorzHaslo}
+              onChange={(e) =>
+                setFormData({ ...formData, powtorzHaslo: e.target.value })
+              }
+              className="w-full border rounded-lg px-4 py-2"
+            />
+
             <p className="text-sm text-gray-500">* - pola wymagane</p>
           </div>
           <div className="mt-6 flex gap-2">

@@ -591,7 +591,7 @@ namespace Dziennik_elektroniczny.Controllers
             }
 
             await _dbContext.SaveChangesAsync();
-            return NoContent();
+            return Ok(new {message = "Edytowano ucznia"});
         }
 
         // PUT: api/uzytkownik/nauczyciel/{id}
@@ -633,7 +633,7 @@ namespace Dziennik_elektroniczny.Controllers
             }
 
             await _dbContext.SaveChangesAsync();
-            return NoContent();
+            return Ok(new {message = "Edytowano nauczyciela"});
         }
 
         // PUT: api/uzytkownik/rodzic/{id}
@@ -671,7 +671,7 @@ namespace Dziennik_elektroniczny.Controllers
             }
 
             await _dbContext.SaveChangesAsync();
-            return NoContent();
+            return Ok(new {message = "Edytowano rodzica"});
         }
 
          //PUT: api/uzytkownik/administrator/{id}
@@ -691,7 +691,7 @@ namespace Dziennik_elektroniczny.Controllers
             admin.Email = dto.Email;
 
             await _dbContext.SaveChangesAsync();
-            return NoContent();
+            return Ok(new {message = "Edytowano administratora"});
         }
 
          //GET: api/uzytkownik/administrator/{id}

@@ -27,6 +27,7 @@ export default function UczniowieList() {
     nazwisko: "",
     email: "",
     haslo: "",
+      powtorzHaslo: "", // nowe pole
     klasaId: 0,
   });
 
@@ -62,10 +63,16 @@ export default function UczniowieList() {
   };
 
   const handleAdd = async () => {
-    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || !formData.klasaId) {
+    if (!formData.imie || !formData.nazwisko || !formData.email || !formData.haslo || !formData.klasaId || !formData.powtorzHaslo) {
       alert("Wypełnij wszystkie pola!");
       return;
     }
+    
+  if (formData.haslo !== formData.powtorzHaslo) {
+    alert("Hasła nie są identyczne!");
+    return;
+  }
+
 
     try {
       await dodajUcznia(formData);
@@ -151,13 +158,14 @@ export default function UczniowieList() {
       nazwisko: uczen.nazwisko,
       email: uczen.email,
       haslo: "",
+        powtorzHaslo: "", // nowe pole
       klasaId: uczen.klasaId || 0,
     });
     setViewMode("edit");
   };
 
   const resetForm = () => {
-    setFormData({ imie: "", nazwisko: "", email: "", haslo: "", klasaId: 0 });
+    setFormData({ imie: "", nazwisko: "", email: "", haslo: "",   powtorzHaslo: "", klasaId: 0 });
     setSelectedUczen(null);
   };
 
@@ -296,6 +304,14 @@ export default function UczniowieList() {
               onChange={(e) => setFormData({ ...formData, haslo: e.target.value })}
               className="w-full border rounded-lg px-4 py-2"
             />
+            <input
+              type="password"
+              placeholder="Powtórz hasło"
+              value={formData.powtorzHaslo}
+              onChange={(e) => setFormData({ ...formData, powtorzHaslo: e.target.value })}
+              className="w-full border rounded-lg px-4 py-2"
+            />
+
             <select
               value={formData.klasaId}
               onChange={(e) => setFormData({ ...formData, klasaId: Number(e.target.value) })}
