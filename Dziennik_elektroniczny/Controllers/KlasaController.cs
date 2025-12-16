@@ -1,4 +1,5 @@
-﻿using Dziennik_elektroniczny.DTOs;
+﻿using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs;
 using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,6 @@ namespace Dziennik_elektroniczny.Controllers
     public class KlasaController : ControllerBase
     {
         private readonly IGenericRepository<Klasa> _klasaRepository;
-
         public KlasaController(IGenericRepository<Klasa> klasaRepository)
         {
             _klasaRepository = klasaRepository;
@@ -38,10 +38,15 @@ namespace Dziennik_elektroniczny.Controllers
 
         // PUT: api/Klasa/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutKlasa(int id, Klasa klasa)
+        public async Task<IActionResult> PutKlasa(int id, [FromBody] KlasaDto dto)
         {
+            
+            var klasa = await _klasaRepository.GetByIdAsync(id);
             if (id != klasa.Id)
                 return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
+
+            klasa.Nazwa = dto.Nazwa;
+            klasa.Rok = dto.Rok;
 
             _klasaRepository.Update(klasa);
             var result = await _klasaRepository.SaveChangesAsync();
@@ -56,6 +61,8 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPost]
         public async Task<ActionResult<Klasa>> PostKlasa(Klasa klasa)
         {
+            //klasa.PlanId = null;
+            //klasa.WychowawcaId = null;
             _klasaRepository.Add(klasa);
             var result = await _klasaRepository.SaveChangesAsync();
 

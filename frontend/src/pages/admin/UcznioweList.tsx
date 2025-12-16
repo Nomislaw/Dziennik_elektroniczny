@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy, zmienRoleUzytkownika,aktywujUzytkownika,
+import { pobierzUczniow, usunUzytkownika, dodajUcznia, edytujUcznia, pobierzKlasy, zmienRoleUzytkownika,aktywujUzytkownika,dezaktywujUzytkownika,
   wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Uczen = {
@@ -82,7 +82,7 @@ export default function UczniowieList() {
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Nie udało się dodać ucznia.");
+      alert(err || "Nie udało się dodać ucznia.");
     }
   };
 
@@ -112,6 +112,21 @@ export default function UczniowieList() {
     } catch (err) {
       console.error(err);
       alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+       const handleDeactiveUser = async (id: number) => {
+    const user = uczniowie.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz dezaktywować to konto?")) return;
+
+    try {
+      await dezaktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas dezaktywowania użytkownika");
     }
   };
 
@@ -245,6 +260,14 @@ export default function UczniowieList() {
                       >
                         🗑 Usuń
                       </button>
+                      {u.czyEmailPotwierdzony === true && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleDeactiveUser(u.id)}
+                          >
+                            ❌ Dezaktywuj
+                          </button>
+                        )}
 
                        {u.czyEmailPotwierdzony === false && (
                           <button

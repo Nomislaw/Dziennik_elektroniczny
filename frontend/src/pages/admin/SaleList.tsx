@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzSale, dodajSale, usunSale } from "../../api/SaleService";
+import { pobierzSale, dodajSale, usunSale, edytujSale } from "../../api/SaleService";
 
 interface Sala {
   id: number;
@@ -9,6 +9,9 @@ interface Sala {
 export default function SaleList() {
   const [sale, setSale] = useState<Sala[]>([]);
   const [nowaSala, setNowaSala] = useState("");
+  const [edytowanaSalaId, setEdytowanaSalaId] = useState<number | null>(null);
+const [edytowanyNumer, setEdytowanyNumer] = useState("");
+
 
   // Pobieranie sal z API
   useEffect(() => {
@@ -48,6 +51,31 @@ export default function SaleList() {
     }
   };
 
+const handleEditStart = (sala: Sala) => {
+  setEdytowanaSalaId(sala.id);
+  setEdytowanyNumer(sala.numer);
+};
+
+const handleEditCancel = () => {
+  setEdytowanaSalaId(null);
+  setEdytowanyNumer("");
+};
+
+const handleEditSave = async (id: number) => {
+  if (!edytowanyNumer.trim()) return alert("Numer sali nie może być pusty");
+
+  try {
+    await edytujSale(id, { numer: edytowanyNumer });
+
+    setEdytowanaSalaId(null);
+    setEdytowanyNumer("");
+    loadSale();
+  } catch (e) {
+    console.error("Błąd edycji sali:", e);
+  }
+};
+
+
   return (
     <div className="max-w-xl mx-auto">
       {/* Formularz dodawania */}
@@ -81,22 +109,60 @@ export default function SaleList() {
               <th className="py-2"></th>
             </tr>
           </thead>
-          <tbody>
-            {sale.map((sala) => (
-              <tr key={sala.id} className="border-b">
-                <td className="py-2">{sala.id}</td>
-                <td>{sala.numer}</td>
-                <td>
-                  <button
-                    onClick={() => handleDelete(sala.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    🗑 Usuń
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+         <tbody>
+  {sale.map((sala) => (
+    <tr key={sala.id} className="border-b">
+      <td className="py-2">{sala.id}</td>
+
+      <td>
+        {edytowanaSalaId === sala.id ? (
+          <input
+            value={edytowanyNumer}
+            onChange={(e) => setEdytowanyNumer(e.target.value)}
+            className="border rounded px-2 py-1 w-full"
+          />
+        ) : (
+          sala.numer
+        )}
+      </td>
+
+      <td className="space-x-2">
+        {edytowanaSalaId === sala.id ? (
+          <>
+            <button
+              onClick={() => handleEditSave(sala.id)}
+              className="text-green-600 hover:underline"
+            >
+              💾 Zapisz
+            </button>
+            <button
+              onClick={handleEditCancel}
+              className="text-gray-600 hover:underline"
+            >
+              ❌ Anuluj
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => handleEditStart(sala)}
+              className="text-blue-600 hover:underline"
+            >
+              ✏️ Edytuj
+            </button>
+            <button
+              onClick={() => handleDelete(sala.id)}
+              className="text-red-600 hover:underline ml-2"
+            >
+              🗑 Usuń
+            </button>
+          </>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
+
         </table>
 
         {sale.length === 0 && (

@@ -9,6 +9,7 @@ import SaleList from "../pages/admin/SaleList";
 //import AdministratorzyList from "../pages/admin/AdministratorzyList";
 import PrzedmiotList from "../pages/admin/PrzedmiotList";
 import Settings from "../pages/Settings"; 
+import KlasyList from "../pages/admin/KlasyList";
 
 
 export default function AdminDashboard() {
@@ -98,6 +99,16 @@ export default function AdminDashboard() {
   📘 Przedmioty
 </button>
 
+<button
+  onClick={() => setActiveTab("klasy")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "klasy" ? "bg-teal-600" : ""
+  }`}
+>
+  🏫 Klasy
+</button>
+
+
 {/* <button
   onClick={() => setActiveTab("klasy")}
   className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
@@ -132,6 +143,7 @@ export default function AdminDashboard() {
             {activeTab === "rodzice" && "Zarządzanie rodzicami"}
             {activeTab === "administratorzy" && "Zarządzanie administratorami"}
             {activeTab === "sale" && "Zarządzanie salami"}
+            {activeTab === "klasy" && "Zarządzanie klasami"}
             {activeTab === "przedmioty" && "Zarządzanie przedmiotami"}
 
 
@@ -145,7 +157,7 @@ export default function AdminDashboard() {
           {activeTab === "administratorzy" && <AdministratorzyList />}
           {activeTab === "sale" && <SaleList />}
           {activeTab === "przedmioty" && <PrzedmiotList />}
-          {/* {activeTab === "klasy" && <PrzedmiotList />} */}
+          {activeTab === "klasy" && <KlasyList />}
           {activeTab === "settings" && <Settings />}
 
 

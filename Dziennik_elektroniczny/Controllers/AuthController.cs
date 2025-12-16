@@ -44,7 +44,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new ErrorResponse { Errors = new List<string> { "Niepoprawne hasło."}});
 
         if (!user.CzyEmailPotwierdzony)
-            return Unauthorized(new ErrorResponse { Errors = new List<string> { "Twoje konto nie zostało jeszcze potwierdzone. Sprawdź pocztę e-mail."}});
+            return Unauthorized(new ErrorResponse { Errors = new List<string> { "Twoje konto jest nieaktywne lub niezweryfikowano konta, sprawdź e-mail."}});
 
         var token = GenerateJwtToken(user);
 
@@ -132,7 +132,7 @@ public class AuthController : ControllerBase
             issuer: jwtSettings["Issuer"],
             audience: jwtSettings["Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: creds
         );
 

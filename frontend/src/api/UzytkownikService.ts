@@ -156,6 +156,12 @@ export function aktywujUzytkownika(id: number) {
   });
 }
 
+export function dezaktywujUzytkownika(id: number) {
+  return fetchAPI(`${BASE}/${id}/dezaktywuj-profil`, {
+    method: "PUT",
+  });
+}
+
 export function wyslijTokenUzytkownika(id: number) {
   return fetchAPI(`${BASE}/${id}/link-aktywacyjny`, {
     method: "POST",

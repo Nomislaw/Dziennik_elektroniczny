@@ -18,3 +18,11 @@ export function usunSale(id: number) {
     method: "DELETE",
   });
 }
+
+export function edytujSale(id: number, data: { numer: string }) {
+  return fetchAPI(`${BASE}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+

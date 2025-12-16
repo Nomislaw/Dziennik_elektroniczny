@@ -6,7 +6,8 @@ import {
   edytujAdministratora,
   zmienRoleUzytkownika,
   aktywujUzytkownika,
-  wyslijTokenUzytkownika
+  wyslijTokenUzytkownika,
+  dezaktywujUzytkownika
 } from "../../api/UzytkownikService";
 
 type Administrator = {
@@ -32,6 +33,10 @@ export default function AdministratorzyList() {
     email: "",
     haslo: "",
     powtorzHaslo: "",
+  });
+  const [currentUser] = useState<Administrator | null>(() => {
+    const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : null;
   });
 
   useEffect(() => {
@@ -89,7 +94,7 @@ await dodajAdministratora({
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Nie udało się dodać administratora.");
+      alert(err || "Nie udało się dodać administratora.");
     }
   };
 
@@ -124,6 +129,21 @@ const handleActiveUser = async (id: number) => {
     } catch (err) {
       console.error(err);
       alert("Błąd podczas aktywowania użytkownika");
+    }
+  };
+
+  const handledeactiveUser = async (id: number) => {
+    const user = administratorzy.find((u) => u.id === id);
+    if (!user) return;
+
+    if (!window.confirm("Na pewno chcesz dezaktywować to konto?")) return;
+
+    try {
+      await dezaktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas dezaktywowania użytkownika");
     }
   };
 
@@ -231,16 +251,19 @@ const handleActiveUser = async (id: number) => {
                       {a.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <select
-                        value={a.rola}
-                        onChange={(e) => handleRoleChange(a.id, e.target.value)}
-                        className="border rounded-lg px-2 py-1"
-                      >
-                        <option value="Administrator">Administrator</option>
-                        <option value="Nauczyciel">Nauczyciel</option>
-                        <option value="Rodzic">Rodzic</option>
-                        <option value="Uczen">Uczeń</option>
-                      </select>
+                     <select
+                          value={a.rola}
+                          onChange={(e) => handleRoleChange(a.id, e.target.value)}
+                          disabled={a.id === currentUser?.id}
+                          className={`border rounded-lg px-2 py-1
+                            ${a.id === currentUser?.id ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          title={a.id === currentUser?.id ? "Nie możesz zmienić własnej roli" : ""}
+                        >
+                          <option value="Administrator">Administrator</option>
+                          <option value="Nauczyciel">Nauczyciel</option>
+                          <option value="Rodzic">Rodzic</option>
+                          <option value="Uczen">Uczeń</option>
+                        </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {a.czyEmailPotwierdzony ? (
@@ -275,6 +298,15 @@ const handleActiveUser = async (id: number) => {
                       >
                         🗑 Usuń
                       </button>
+                      {a.czyEmailPotwierdzony === true && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handledeactiveUser(a.id)}
+                          >
+                            ❌ Dezaktywuj
+                          </button>
+                        )}
+
                         {a.czyEmailPotwierdzony === false && (
                           <button
                             className="text-blue-600 hover:text-blue-800"

@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
 using System.Collections.Generic; // Dodane dla IEnumerable
-using System.Threading.Tasks; // Dodane dla Task
+using System.Threading.Tasks;
+using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -15,9 +17,11 @@ namespace Dziennik_elektroniczny.Controllers
         // ZMIANA: z AppDbContext na IGenericRepository<Sala>
         private readonly IGenericRepository<Sala> _salaRepository;
 
+       
         public SaleController(IGenericRepository<Sala> salaRepository) // ZMIANA
         {
             _salaRepository = salaRepository;
+           
         }
 
         // GET: api/Sale
@@ -46,22 +50,23 @@ namespace Dziennik_elektroniczny.Controllers
 
         // PUT: api/Sale/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSala(int id, Sala sala)
+        public async Task<IActionResult> PutSala(int id, [FromBody] SalaUpdateDto dto)
         {
-            if (id != sala.Id)
-            {
-                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
-            }
+            var sala = await _salaRepository.GetByIdAsync(id);
+            if (sala == null)
+                return NotFound("Sala nie istnieje");
 
-            // ZMIANA: Logika aktualizacji jak w OcenyController
+            sala.Numer = dto.Numer;
+
             _salaRepository.Update(sala);
 
             var result = await _salaRepository.SaveChangesAsync();
             if (!result)
                 return StatusCode(500, "Nie udało się zapisać zmian.");
 
-            return Ok(new { message = "Zaktualizowano sale" });
+            return Ok(new { message = "Zaktualizowano salę" });
         }
+
 
         // POST: api/Sale
         [HttpPost]

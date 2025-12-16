@@ -12,10 +12,10 @@ namespace Dziennik_elektroniczny.Models
 
         // Relacja 1-do-1: Klasa ma jednego wychowawcę (teraz typu Uzytkownik)
         public int? WychowawcaId { get; set; } // Klucz obcy, nullable
-        public virtual Uzytkownik Wychowawca { get; set; }
+        public virtual Uzytkownik? Wychowawca { get; set; }
 
         // Relacja 1-do-1: Klasa ma jeden plan zajęć
         public int? PlanId { get; set; }
-        public virtual Plan Plan { get; set; }
+        public virtual Plan? Plan { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow, zmienRoleUzytkownika, aktywujUzytkownika,
+import { pobierzRodzicow, usunUzytkownika, dodajRodzica, edytujRodzica, pobierzUczniow, zmienRoleUzytkownika, aktywujUzytkownika, dezaktywujUzytkownika,
   wyslijTokenUzytkownika } from "../../api/UzytkownikService";
 
 type Rodzic = {
@@ -78,6 +78,20 @@ export default function RodziceList() {
     }
   };
 
+    const handleDeactiveUser = async (id: number) => {
+    const user = rodzice.find((u) => u.id === id);
+    if (!user) return;
+    if (!window.confirm("Na pewno chcesz dezaktywować to konto?")) return;
+
+    try {
+      await dezaktywujUzytkownika(id);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas dezaktywowania użytkownika");
+    }
+  };
+
   const handleSendTokenToUser = async (id: number) => {
     const user = rodzice.find((u) => u.id === id);
     if (!user) return;
@@ -124,7 +138,7 @@ export default function RodziceList() {
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Nie udało się dodać rodzica.");
+      alert(err || "Nie udało się dodać rodzica.");
     }
   };
 
@@ -274,6 +288,14 @@ export default function RodziceList() {
                       >
                         🗑 Usuń
                       </button>
+                      {r.czyEmailPotwierdzony === true && (
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleDeactiveUser(r.id)}
+                          >
+                            ❌ Dezaktywuj
+                          </button>
+                        )}
                       {!r.czyEmailPotwierdzony && (
                         <>
                           <button

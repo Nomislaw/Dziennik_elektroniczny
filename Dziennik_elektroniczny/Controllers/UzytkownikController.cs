@@ -202,6 +202,22 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(user);
         }
         
+        [HttpPut("{id}/dezaktywuj-profil")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<ActionResult<Uzytkownik>> DezaktywujProfil(int id)
+        {
+            var user = await _dbContext.Uzytkownicy.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return null;
+            if (!user.CzyEmailPotwierdzony) return BadRequest(new ErrorResponse { Errors = new List<string> { "Użytkownik już jest nieaktywny" } });
+            
+            user.TokenWeryfikacyjny = null;
+            user.CzyEmailPotwierdzony = false;
+            
+            await _dbContext.SaveChangesAsync();
+            
+            return Ok(user);
+        }
+        
         [HttpPost("{id}/rola")]
         [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> ZmienRole(int id, [FromQuery] Rola nowaRola)
@@ -751,8 +767,14 @@ namespace Dziennik_elektroniczny.Controllers
 
             nowyUzytkownik.UstawHaslo(dto.Haslo);
 
-            _uzytkownikRepository.Add(nowyUzytkownik);
-            return CreatedAtAction(nameof(GetById), new { id = nowyUzytkownik.Id }, nowyUzytkownik);
+            await _uzytkownikRepository.Add(nowyUzytkownik);
+            return Ok(new
+            {
+                Imie = nowyUzytkownik.Imie,
+                Nazwisko = nowyUzytkownik.Nazwisko,
+                Email = nowyUzytkownik.Email,
+                Rola = nowyUzytkownik.Rola.ToString()
+            });
         }
         // DELETE: api/uzytkownik/administrator/{id}
         [HttpDelete("administrator/{id}")]
