@@ -1,21 +1,47 @@
+import { fetchAPI } from "./api";
 import { OcenaCreateDto } from "../types/Ocena";
 
-const API_URL = "https://localhost:7292/api/Oceny";
+const BASE = "/Oceny"; // <-- dokładnie jak controller
 
-export async function addOcena(dto: OcenaCreateDto) {
-  const token = localStorage.getItem("token");
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(dto),
+export function pobierzOceny() {
+  return fetchAPI(`${BASE}`, {
+    method: "GET",
   });
+}
 
-  if (!res.ok) {
-    throw new Error("Nie udało się dodać oceny");
+export function pobierzOcene(id: number) {
+  return fetchAPI(`${BASE}/${id}`, {
+    method: "GET",
+  });
+}
+
+export function addOcena(dane: OcenaCreateDto) {
+  return fetchAPI(`${BASE}`, {
+    method: "POST",
+    body: JSON.stringify(dane),
+  });
+}
+
+export function edytujOcene(
+  id: number,
+  dane: {
+    dataWystawienia?: string;
+    opis?: string;
+    wartosc?: number;
+    typ?: number;
+    uczenId?: number;
+    nauczycielId?: number;
+    przedmiotId?: number;
   }
+) {
+  return fetchAPI(`${BASE}/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(dane),
+  });
+}
 
-  return await res.json();
+export function usunOcene(id: number) {
+  return fetchAPI(`${BASE}/${id}`, {
+    method: "DELETE",
+  });
 }

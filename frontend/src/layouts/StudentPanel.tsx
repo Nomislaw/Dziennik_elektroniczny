@@ -76,6 +76,7 @@ export default function StudentPanel() {
           {/* Informacje o użytkowniku i wylogowanie */}
           <div className="mb-2 text-sm">
             <p className="font-semibold">{user.imie} {user.nazwisko}</p>
+            <p className="text-blue-200">{user.email}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -92,9 +93,7 @@ export default function StudentPanel() {
         <header className="bg-white shadow p-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold text-gray-800">Panel ucznia</h1>
           <div className="flex items-center space-x-3">
-            <span className="text-gray-700 font-medium">
-              Zalogowany jako: {user.imie} {user.nazwisko}
-            </span>
+            
           </div>
         </header>
 

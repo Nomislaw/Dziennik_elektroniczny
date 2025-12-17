@@ -1,5 +1,5 @@
 import React from "react";
-import OcenaItem from "../components/OcenaItem";
+import OcenaItem from "../../components/OcenaItem";
 
 export default function OcenyView() {
   const przedmioty = [
