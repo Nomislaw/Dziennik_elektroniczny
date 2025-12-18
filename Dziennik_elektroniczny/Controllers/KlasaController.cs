@@ -2,7 +2,9 @@
 using Dziennik_elektroniczny.DTOs;
 using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -11,9 +13,11 @@ namespace Dziennik_elektroniczny.Controllers
     public class KlasaController : ControllerBase
     {
         private readonly IGenericRepository<Klasa> _klasaRepository;
-        public KlasaController(IGenericRepository<Klasa> klasaRepository)
+        private readonly AppDbContext _dbContext;
+        public KlasaController(IGenericRepository<Klasa> klasaRepository, AppDbContext dbContext)
         {
             _klasaRepository = klasaRepository;
+            _dbContext = dbContext;
         }
 
         // GET: api/Klasa
@@ -22,6 +26,28 @@ namespace Dziennik_elektroniczny.Controllers
         {
             var klasy = await _klasaRepository.GetAllAsync();
             return Ok(klasy);
+        }
+        
+        [HttpGet("nauczyciel/{nauczycielId}")]
+        [Authorize (Roles = "Nauczyciel")]
+        public async Task<ActionResult<IEnumerable<PrzedmiotDto>>> GetKlasyNauczyciela(int nauczycielId)
+        {
+            var teacher = await _dbContext.Uzytkownicy
+                .Include(u => u.Klasy)  
+                .FirstOrDefaultAsync(u => u.Id == nauczycielId);  
+
+            if (teacher == null)
+                return NotFound("Nauczyciel nie znaleziony");
+
+            var przedmioty = teacher.Klasy;  
+
+            var dto = przedmioty.Select(p => new KlasaDto
+            {
+                Id = p.Id,
+                Nazwa = p.Nazwa
+            });
+
+            return Ok(dto);
         }
 
         // GET: api/Klasa/5

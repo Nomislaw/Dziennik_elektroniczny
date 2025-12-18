@@ -4,7 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 // using Microsoft.EntityFrameworkCore; // ZMIANA: Usunięte
 // using Dziennik_elektroniczny.Data; // ZMIANA: Usunięte
 using System.Collections.Generic; // Dodane dla IEnumerable
-using System.Threading.Tasks; // Dodane dla Task
+using System.Threading.Tasks;
+using Dziennik_elektroniczny.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore; // Dodane dla Task
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -14,10 +17,12 @@ namespace Dziennik_elektroniczny.Controllers
     {
         // ZMIANA: z AppDbContext na IGenericRepository<Przedmiot>
         private readonly IGenericRepository<Przedmiot> _przedmiotRepository;
+        private readonly AppDbContext _dbContext;
 
-        public PrzedmiotController(IGenericRepository<Przedmiot> przedmiotRepository) // ZMIANA
+        public PrzedmiotController(IGenericRepository<Przedmiot> przedmiotRepository, AppDbContext dbContext) // ZMIANA
         {
             _przedmiotRepository = przedmiotRepository;
+            _dbContext = dbContext;
         }
 
         // GET: api/Przedmioty
@@ -28,6 +33,29 @@ namespace Dziennik_elektroniczny.Controllers
             var przedmioty = await _przedmiotRepository.GetAllAsync();
             return Ok(przedmioty);
         }
+        
+        [HttpGet("nauczyciel/{nauczycielId}")]
+        [Authorize (Roles = "Nauczyciel")]
+        public async Task<ActionResult<IEnumerable<PrzedmiotDto>>> GetPrzedmiotyNauczyciela(int nauczycielId)
+        {
+            var teacher = await _dbContext.Uzytkownicy
+                .Include(u => u.Przedmioty)  
+                .FirstOrDefaultAsync(u => u.Id == nauczycielId);  
+
+            if (teacher == null)
+                return NotFound("Nauczyciel nie znaleziony");
+
+            var przedmioty = teacher.Przedmioty;  
+
+            var dto = przedmioty.Select(p => new PrzedmiotDto
+            {
+                Id = p.Id,
+                Nazwa = p.Nazwa
+            });
+
+            return Ok(dto);
+        }
+
 
         // GET: api/Przedmioty/5
         [HttpGet("{id}")]
@@ -97,5 +125,11 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(new { message = "Usunieto przedmiot" });
         }
+    }
+
+    public class PrzedmiotDto
+    {
+        public int Id { get; set; }
+        public string Nazwa { get; set; }
     }
 }

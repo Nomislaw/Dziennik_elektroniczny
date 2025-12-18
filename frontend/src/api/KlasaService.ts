@@ -6,6 +6,10 @@ export function pobierzKlasa() {
   return fetchAPI(`${BASE}`, { method: "GET" });
 }
 
+export function pobierzKlasaNauczyciela(idNauczyciela: number) {
+  return fetchAPI(`${BASE}/nauczyciel/${idNauczyciela}`, { method: "GET" });
+}
+
 export function dodajKlasa(data: { nazwa: string; rok: number; wychowawcaId: number | null; planId: number | null }) {
   return fetchAPI(`${BASE}`, {
     method: "POST",

@@ -123,5 +123,13 @@ public class AppDbContext : DbContext
 
             
         });
+        modelBuilder.Entity<Uzytkownik>()
+            .HasMany(u => u.Klasy)
+            .WithMany();  // ← MUSI BYĆ!
+        
+        modelBuilder.Entity<Uzytkownik>()
+            .HasMany(u => u.Przedmioty)
+            .WithMany();  // ← MUSI BYĆ!
+        
     }
 }

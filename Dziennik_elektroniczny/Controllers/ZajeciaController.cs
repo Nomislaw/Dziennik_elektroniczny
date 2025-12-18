@@ -29,7 +29,7 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         [HttpGet("nauczyciel/{nauczycielId}")]
-        [Authorize(Roles = "Admin,Nauczyciel")]
+        [Authorize(Roles = "Administrator,Nauczyciel")]
         public async Task<ActionResult<IEnumerable<ZajeciaDetailsDto>>> GetZajeciaNauczyciela(int nauczycielId)
         {
             try
@@ -65,7 +65,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // ========== ENDPOINT 2: Uczniowie dla zajęć ==========
         [HttpGet("{zajeciaId}/uczniowie")]
-        [Authorize(Roles = "Admin,Nauczyciel")]
+        [Authorize(Roles = "Administrator,Nauczyciel")]
         public async Task<ActionResult<IEnumerable<UczenFrekwencjaDto>>> GetUczniowieDlaZajec(int zajeciaId)
         {
             try
@@ -126,7 +126,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // GET: api/Zajecia
         [HttpGet]
-        [Authorize(Roles = "Admin,Nauczyciel")]
+        [Authorize(Roles = "Administrator,Nauczyciel")]
         public async Task<ActionResult<IEnumerable<ZajeciaDto>>> GetZajecia()
         {
             var zajecia = await _zajeciaRepository.GetAllWithIncludesAsync(
@@ -157,7 +157,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // GET: api/Zajecia/5
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Nauczyciel,Uczen")]
+        [Authorize(Roles = "Administrator,Nauczyciel,Uczen")]
         public async Task<ActionResult<ZajeciaDto>> GetZajecia(int id)
         {
             var zajecia = await _zajeciaRepository.GetByIdWithIncludesAsync(
@@ -197,7 +197,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // PATCH: api/Zajecia/5
         [HttpPatch("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Administrator")]
         public async Task<ActionResult> PatchZajecia(int id, ZajeciaUpdateDto dto)
         {
             var zajecia = await _zajeciaRepository.GetByIdAsync(id);
@@ -240,7 +240,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // POST: api/Zajecia
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<Zajecia>> PostZajecia(ZajeciaCreateDto dto)
         {
             var nauczyciel = await _uzytkownikRepository.GetByIdAsync(dto.NauczycielId);
@@ -268,7 +268,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // DELETE: api/Zajecia/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> DeleteZajecia(int id)
         {
             var zajecia = await _zajeciaRepository.GetByIdAsync(id);

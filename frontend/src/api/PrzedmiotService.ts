@@ -8,6 +8,12 @@ export function pobierzPrzedmioty() {
   });
 }
 
+export function pobierzPrzedmiotyNauczyciela(idNauczyciela: number) {
+  return fetchAPI(`${BASE}/nauczyciel/${idNauczyciela}`, {
+    method: "GET",
+  });
+}
+
 export function dodajPrzedmiot(dane: { nazwa: string }) {
   return fetchAPI(`${BASE}`, {
     method: "POST",

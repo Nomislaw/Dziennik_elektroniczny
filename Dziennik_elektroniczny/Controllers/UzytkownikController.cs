@@ -240,6 +240,9 @@ namespace Dziennik_elektroniczny.Controllers
         [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<Uzytkownik>> DodajUcznia([FromBody] DodajUczenDto dto)
         {
+            if (await _dbContext.Uzytkownicy.AnyAsync(u => u.Email == dto.Email)) 
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Podany adres e-mail jest już zarejestrowany."}});
+            
             var nowyUzytkownik = new Uzytkownik
             {
                 Imie = dto.Imie,
@@ -273,48 +276,8 @@ namespace Dziennik_elektroniczny.Controllers
             });
         }
 
-        // POST api/uzytkownik/nauczyciel
-        [HttpPost("nauczyciel")]
-        [Authorize(Roles = "Administrator")]
-        public async Task<ActionResult<Uzytkownik>> DodajNauczyciela([FromBody] DodajNauczycielaDto dto)
-        {
-            var nowyUzytkownik = new Uzytkownik
-            {
-                Imie = dto.Imie,
-                Nazwisko = dto.Nazwisko,
-                Email = dto.Email,
-                Rola = Rola.Nauczyciel
-            };
-
-            nowyUzytkownik.UstawHaslo(dto.Haslo);
-
-            // Jeśli nauczyciel ma być wychowawcą, sprawdź czy klasa istnieje
-            if (dto.WychowawstwoKlasaId.HasValue)
-            {
-                var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
-                if (klasa == null)
-                    return BadRequest(new ErrorResponse { Errors = new List<string> {"Podana klasa nie istnieje."}});
-
-                // Sprawdź czy klasa nie ma już wychowawcy
-                var istniejacyWychowawca = await _dbContext.Uzytkownicy
-                    .AnyAsync(u => u.Wychowawstwo.Id == dto.WychowawstwoKlasaId.Value);
-                if (istniejacyWychowawca)
-                    return BadRequest(new ErrorResponse { Errors = new List<string> {"Ta klasa ma już przypisanego wychowawcę."}});
-
-                nowyUzytkownik.Wychowawstwo = klasa;
-            }
-
-            await _uzytkownikRepository.Add(nowyUzytkownik);
-            return Ok(new
-            {
-                id = nowyUzytkownik.Id,
-                imie = nowyUzytkownik.Imie,
-                nazwisko = nowyUzytkownik.Nazwisko,
-                email = nowyUzytkownik.Email,
-                rola = nowyUzytkownik.Rola.ToString(),
-                wychowawstwoKlasaId = dto.WychowawstwoKlasaId
-            });
-        }
+      
+       
 
         // POST api/uzytkownik/rodzic
         [HttpPost("rodzic")]
@@ -323,6 +286,9 @@ namespace Dziennik_elektroniczny.Controllers
         {
             if (dto.DzieciIds == null || !dto.DzieciIds.Any())
                 return BadRequest("Rodzic musi mieć przypisane co najmniej jedno dziecko.");
+            
+            if (await _dbContext.Uzytkownicy.AnyAsync(u => u.Email == dto.Email)) 
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Podany adres e-mail jest już zarejestrowany."}});
 
             var nowyUzytkownik = new Uzytkownik
             {
@@ -386,29 +352,7 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(uczniowie);
         }
 
-        // GET: api/uzytkownik/nauczyciele
-        [HttpGet("nauczyciele")]
-        [Authorize(Roles = "Administrator")]
-        public async Task<ActionResult<IEnumerable<NauczycielDto>>> GetNauczyciele()
-        {
-            var nauczyciele = await _dbContext.Uzytkownicy
-                .Where(u => u.Rola == Rola.Nauczyciel)
-                .Include(u => u.Wychowawstwo)
-                .Select(u => new NauczycielDto
-                {
-                    Id = u.Id,
-                    Imie = u.Imie,
-                    Nazwisko = u.Nazwisko,
-                    Email = u.Email,
-                    Rola = u.Rola.ToString(),
-                    CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
-                    CzyWychowawca = u.Wychowawstwo != null,
-                    WychowawstwoKlasaNazwa = u.Wychowawstwo != null ? u.Wychowawstwo.Nazwa : null
-                })
-                .ToListAsync();
-
-            return Ok(nauczyciele);
-        }
+        
 
         // GET: api/uzytkownik/rodzice
         [HttpGet("rodzice")]
@@ -478,40 +422,7 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(uczen);
         }
 
-        // GET: api/uzytkownik/nauczyciel/{id}
-        [HttpGet("nauczyciel/{id}")]
-        [Authorize(Roles = "Administrator")]
-        public async Task<ActionResult<NauczycielDto>> GetNauczycielById(int id)
-        {
-            var nauczyciel = await _dbContext.Uzytkownicy
-                .Where(u => u.Id == id && u.Rola == Rola.Nauczyciel)
-                .Include(u => u.Wychowawstwo)
-                .Include(u => u.ProwadzoneZajecia)
-                    .ThenInclude(z => z.Przedmiot)
-                .Include(u => u.WystawioneOceny)
-                .Select(u => new NauczycielDto
-                {
-                    Id = u.Id,
-                    Imie = u.Imie,
-                    Nazwisko = u.Nazwisko,
-                    Email = u.Email,
-                    CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
-                    CzyWychowawca = u.Wychowawstwo != null,
-                    WychowawstwoKlasaId = u.Wychowawstwo != null ? u.Wychowawstwo.Id : null,
-                    WychowawstwoKlasaNazwa = u.Wychowawstwo != null ? u.Wychowawstwo.Nazwa : null,
-                    ProwadzonePrzedmioty = u.ProwadzoneZajecia
-                        .Select(z => z.Przedmiot.Nazwa)
-                        .Distinct()
-                        .ToList(),
-                    LiczbaWystawionychOcen = u.WystawioneOceny.Count
-                })
-                .FirstOrDefaultAsync();
-
-            if (nauczyciel == null)
-                return NotFound("Nauczyciel o podanym ID nie został znaleziony.");
-
-            return Ok(nauczyciel);
-        }
+        
 
         // GET: api/uzytkownik/rodzic/{id}
         [HttpGet("rodzic/{id}")]
@@ -610,47 +521,7 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(new {message = "Edytowano ucznia"});
         }
 
-        // PUT: api/uzytkownik/nauczyciel/{id}
-        [HttpPut("nauczyciel/{id}")]
-        [Authorize(Roles = "Administrator")]
-        public async Task<IActionResult> EdytujNauczyciela(int id, [FromBody] EdytujNauczyciela dto)
-        {
-            var nauczyciel = await _dbContext.Uzytkownicy
-                .Include(u => u.Wychowawstwo)
-                .FirstOrDefaultAsync(u => u.Id == id && u.Rola == Rola.Nauczyciel);
-
-            if (nauczyciel == null)
-                return NotFound("Nauczyciel o podanym ID nie został znaleziony.");
-
-            // Aktualizuj podstawowe dane
-            nauczyciel.Imie = dto.Imie;
-            nauczyciel.Nazwisko = dto.Nazwisko;
-            nauczyciel.Email = dto.Email;
-
-            // Aktualizuj wychowawstwo jeśli podano
-            if (dto.WychowawstwoKlasaId.HasValue)
-            {
-                var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
-                if (klasa == null)
-                    return BadRequest("Podana klasa nie istnieje.");
-
-                // Sprawdź czy klasa nie ma już innego wychowawcy
-                var innyWychowawca = await _dbContext.Uzytkownicy
-                    .AnyAsync(u => u.Wychowawstwo.Id == dto.WychowawstwoKlasaId.Value && u.Id != id);
-
-                if (innyWychowawca)
-                    return BadRequest("Ta klasa ma już przypisanego innego wychowawcę.");
-
-                nauczyciel.Wychowawstwo = klasa;
-            }
-            else
-            {
-                nauczyciel.Wychowawstwo = null;
-            }
-
-            await _dbContext.SaveChangesAsync();
-            return Ok(new {message = "Edytowano nauczyciela"});
-        }
+        
 
         // PUT: api/uzytkownik/rodzic/{id}
         [HttpPut("rodzic/{id}")]
@@ -757,6 +628,9 @@ namespace Dziennik_elektroniczny.Controllers
         [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<Uzytkownik>> DodajAdministratora([FromBody] DodajAdministratoraDto dto)
         {
+            if (await _dbContext.Uzytkownicy.AnyAsync(u => u.Email == dto.Email)) 
+                return BadRequest(new ErrorResponse { Errors = new List<string> {"Podany adres e-mail jest już zarejestrowany."}});
+            
             var nowyUzytkownik = new Uzytkownik
             {
                 Imie = dto.Imie,
@@ -814,7 +688,222 @@ namespace Dziennik_elektroniczny.Controllers
             return Ok(new { message = "Administrator został pomyślnie usunięty." });
         }
         
+      [HttpGet("nauczyciele")]
+[Authorize(Roles = "Administrator")]
+public async Task<ActionResult<IEnumerable<NauczycielDto>>> GetNauczyciele()
+{
+    var nauczyciele = await _dbContext.Uzytkownicy
+        .Where(u => u.Rola == Rola.Nauczyciel)
+        .Include(u => u.Wychowawstwo)
+        .Include(u => u.Klasy)
+        .Include(u => u.Przedmioty)
+        .Include(u => u.ProwadzoneZajecia)
+            .ThenInclude(z => z.Przedmiot)
+        .Include(u => u.WystawioneOceny)
+        .ToListAsync();
 
+    var nauczycieleDto = nauczyciele.Select(u => new NauczycielDto
+    {
+        Id = u.Id,
+        Imie = u.Imie,
+        Nazwisko = u.Nazwisko,
+        Email = u.Email,
+        Rola = u.Rola.ToString(),
+        CzyEmailPotwierdzony = u.CzyEmailPotwierdzony,
+        CzyWychowawca = u.Wychowawstwo != null,
+        WychowawstwoKlasaId = u.Wychowawstwo?.Id,
+        WychowawstwoKlasaNazwa = u.Wychowawstwo?.Nazwa,
+        Klasy = u.Klasy.Select(k => new { id = k.Id, nazwa = k.Nazwa }).ToArray(), // ToArray() zamiast ToList<object>()
+        KlasyIds = u.Klasy.Select(k => k.Id).ToList(),
+        Przedmioty = u.Przedmioty.Select(p => new { id = p.Id, nazwa = p.Nazwa }).ToArray(), // ToArray() zamiast ToList<object>()
+        PrzedmiotyIds = u.Przedmioty.Select(p => p.Id).ToList(),
+        ProwadzonePrzedmioty = u.ProwadzoneZajecia.Select(z => z.Przedmiot.Nazwa).Distinct().ToList(),
+        LiczbaWystawionychOcen = u.WystawioneOceny.Count
+    }).ToList();
+
+    return Ok(nauczycieleDto);
+}
+
+[HttpGet("nauczyciel/{id}")]
+[Authorize(Roles = "Administrator")]
+public async Task<ActionResult<NauczycielDto>> GetNauczycielById(int id)
+{
+    var nauczyciel = await _dbContext.Uzytkownicy
+        .Where(u => u.Id == id && u.Rola == Rola.Nauczyciel)
+        .Include(u => u.Wychowawstwo)
+        .Include(u => u.Klasy)
+        .Include(u => u.Przedmioty)
+        .Include(u => u.ProwadzoneZajecia)
+            .ThenInclude(z => z.Przedmiot)
+        .Include(u => u.WystawioneOceny)
+        .FirstOrDefaultAsync();
+
+    if (nauczyciel == null)
+        return NotFound();
+
+    var dto = new NauczycielDto
+    {
+        Id = nauczyciel.Id,
+        Imie = nauczyciel.Imie,
+        Nazwisko = nauczyciel.Nazwisko,
+        Email = nauczyciel.Email,
+        Rola = nauczyciel.Rola.ToString(),
+        CzyEmailPotwierdzony = nauczyciel.CzyEmailPotwierdzony,
+        CzyWychowawca = nauczyciel.Wychowawstwo != null,
+        WychowawstwoKlasaId = nauczyciel.Wychowawstwo?.Id,
+        WychowawstwoKlasaNazwa = nauczyciel.Wychowawstwo?.Nazwa,
+        Klasy = nauczyciel.Klasy.Select(k => new { id = k.Id, nazwa = k.Nazwa }).ToArray(),
+        KlasyIds = nauczyciel.Klasy.Select(k => k.Id).ToList(),
+        Przedmioty = nauczyciel.Przedmioty.Select(p => new { id = p.Id, nazwa = p.Nazwa }).ToArray(),
+        PrzedmiotyIds = nauczyciel.Przedmioty.Select(p => p.Id).ToList(),
+        ProwadzonePrzedmioty = nauczyciel.ProwadzoneZajecia.Select(z => z.Przedmiot.Nazwa).Distinct().ToList(),
+        LiczbaWystawionychOcen = nauczyciel.WystawioneOceny.Count
+    };
+
+    return Ok(dto);
+}
+
+
+        
+    
+
+
+        [HttpPut("nauczyciel/{id}")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> EdytujNauczyciela(int id, [FromBody] EdytujNauczyciela dto)
+        {
+            var nauczyciel = await _dbContext.Uzytkownicy
+                .Include(u => u.Wychowawstwo)
+                .Include(u => u.Klasy)
+                .Include(u => u.Przedmioty)
+                .FirstOrDefaultAsync(u => u.Id == id && u.Rola == Rola.Nauczyciel);
+
+            if (nauczyciel == null)
+                return NotFound();
+
+            nauczyciel.Imie = dto.Imie;
+            nauczyciel.Nazwisko = dto.Nazwisko;
+            nauczyciel.Email = dto.Email;
+
+            // Wychowawstwo
+            if (dto.WychowawstwoKlasaId.HasValue)
+            {
+                var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
+                if (klasa == null)
+                    return BadRequest("Podana klasa nie istnieje.");
+
+                var inny = await _dbContext.Uzytkownicy
+                    .AnyAsync(u => u.Wychowawstwo.Id == klasa.Id && u.Id != id);
+
+                if (inny)
+                    return BadRequest("Ta klasa ma już wychowawcę.");
+
+                nauczyciel.Wychowawstwo = klasa;
+            }
+            else
+            {
+                nauczyciel.Wychowawstwo = null;
+            }
+
+            // Klasy
+            nauczyciel.Klasy.Clear();
+            if (dto.KlasyIds.Any())
+            {
+                var klasy = await _dbContext.Klasy
+                    .Where(k => dto.KlasyIds.Contains(k.Id))
+                    .ToListAsync();
+                nauczyciel.Klasy = klasy;
+            }
+
+            // Przedmioty
+            nauczyciel.Przedmioty.Clear();
+            if (dto.PrzedmiotyIds.Any())
+            {
+                var przedmioty = await _dbContext.Przedmioty
+                    .Where(p => dto.PrzedmiotyIds.Contains(p.Id))
+                    .ToListAsync();
+                nauczyciel.Przedmioty = przedmioty;
+            }
+
+            await _dbContext.SaveChangesAsync();
+            return Ok(new { message = "Zaktualizowano nauczyciela" });
+        }
+
+        [HttpPost("nauczyciel")]
+[Authorize(Roles = "Administrator")]
+public async Task<ActionResult<Uzytkownik>> DodajNauczyciela([FromBody] DodajNauczycielaDto dto)
+{
+    if (string.IsNullOrWhiteSpace(dto.Imie) || 
+        string.IsNullOrWhiteSpace(dto.Nazwisko) || 
+        string.IsNullOrWhiteSpace(dto.Email) || 
+        string.IsNullOrWhiteSpace(dto.Haslo))
+    {
+        return BadRequest(new ErrorResponse { Errors = new List<string> { "Wszystkie pola wymagane." } });
+    }
+    
+    if (await _dbContext.Uzytkownicy.AnyAsync(u => u.Email == dto.Email)) 
+        return BadRequest(new ErrorResponse { Errors = new List<string> {"Podany adres e-mail jest już zarejestrowany."}});
+
+    var nowyUzytkownik = new Uzytkownik
+    {
+        Imie = dto.Imie,
+        Nazwisko = dto.Nazwisko,
+        Email = dto.Email,
+        Rola = Rola.Nauczyciel
+    };
+
+    nowyUzytkownik.UstawHaslo(dto.Haslo);
+
+    // Wychowawstwo
+    if (dto.WychowawstwoKlasaId.HasValue)
+    {
+        var klasa = await _dbContext.Klasy.FindAsync(dto.WychowawstwoKlasaId.Value);
+        if (klasa == null)
+            return BadRequest(new ErrorResponse { Errors = new List<string> { "Podana klasa nie istnieje." } });
+
+        var istniejacyWychowawca = await _dbContext.Uzytkownicy
+            .AnyAsync(u => u.Wychowawstwo.Id == dto.WychowawstwoKlasaId.Value);
+        if (istniejacyWychowawca)
+            return BadRequest(new ErrorResponse { Errors = new List<string> { "Ta klasa ma już przypisanego wychowawcę." } });
+
+        nowyUzytkownik.Wychowawstwo = klasa;
+    }
+
+    // Klasy
+    if (dto.KlasyIds != null && dto.KlasyIds.Any())
+    {
+        var klasy = await _dbContext.Klasy
+            .Where(k => dto.KlasyIds.Contains(k.Id))
+            .ToListAsync();
+        nowyUzytkownik.Klasy = klasy;
+    }
+
+    // Przedmioty
+    if (dto.PrzedmiotyIds != null && dto.PrzedmiotyIds.Any())
+    {
+        var przedmioty = await _dbContext.Przedmioty
+            .Where(p => dto.PrzedmiotyIds.Contains(p.Id))
+            .ToListAsync();
+        nowyUzytkownik.Przedmioty = przedmioty;
+    }
+
+    await _uzytkownikRepository.Add(nowyUzytkownik);
+
+    return Ok(new
+    {
+        id = nowyUzytkownik.Id,
+        imie = nowyUzytkownik.Imie,
+        nazwisko = nowyUzytkownik.Nazwisko,
+        email = nowyUzytkownik.Email,
+        rola = nowyUzytkownik.Rola.ToString(),
+        wychowawstwoKlasaId = dto.WychowawstwoKlasaId,
+        klasyIds = dto.KlasyIds,
+        przedmiotyIds = dto.PrzedmiotyIds
+    });
+}
+
+
+        
 
     }
 

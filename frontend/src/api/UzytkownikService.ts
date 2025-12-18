@@ -62,6 +62,8 @@ export function dodajNauczyciela(dane: {
   email: string;
   haslo: string;
   wychowawstwoKlasaId?: number;
+    klasyIds?: number[];      // <-- dodaj
+  przedmiotyIds?: number[]; // <-- dodaj
 }) {
   return fetchAPI(`${BASE}/nauczyciel`, {
     method: "POST",
@@ -113,6 +115,8 @@ export function edytujNauczyciela(id: string, dane: {
   nazwisko: string;
   email: string;
   wychowawstwoKlasaId?: number;
+    klasyIds?: number[];      // <-- dodaj
+  przedmiotyIds?: number[]; // <-- dodaj
 }) {
   return fetchAPI(`${BASE}/nauczyciel/${id}`, {
     method: "PUT",

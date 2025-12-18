@@ -30,6 +30,11 @@ namespace Dziennik_elektroniczny.Models
 
         // Klasa, której ten Użytkownik jest Wychowawcą
         public virtual Klasa Wychowawstwo { get; set; }
+        
+        public virtual ICollection<Klasa> Klasy { get; set; } = new List<Klasa>();
+        
+        public virtual ICollection<Przedmiot> Przedmioty { get; set; } = new List<Przedmiot>();
+        
 
         // Oceny wystawione przez tego Użytkownika (jako Nauczyciela)
         public virtual ICollection<Ocena> WystawioneOceny { get; set; } = new List<Ocena>();

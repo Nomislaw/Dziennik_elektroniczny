@@ -8,6 +8,11 @@ export function pobierzOceny() {
     method: "GET",
   });
 }
+export function pobierzOcenyUczenPrzedmiot(idUczen: number, idPrzedmiot: number) {
+  return fetchAPI(`${BASE}/uczen/${idUczen}/przedmiot/${idPrzedmiot}`, {
+    method: "GET",
+  });
+}
 
 export function pobierzOcene(id: number) {
   return fetchAPI(`${BASE}/${id}`, {

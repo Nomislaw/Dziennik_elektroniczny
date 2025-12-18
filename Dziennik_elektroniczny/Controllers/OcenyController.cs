@@ -1,7 +1,9 @@
-﻿using Dziennik_elektroniczny.DTOs.OcenyDto;
+﻿using Dziennik_elektroniczny.Data;
+using Dziennik_elektroniczny.DTOs.OcenyDto;
 using Dziennik_elektroniczny.Interfaces;
 using Dziennik_elektroniczny.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dziennik_elektroniczny.Controllers
 {
@@ -12,12 +14,14 @@ namespace Dziennik_elektroniczny.Controllers
         private readonly IGenericRepository<Ocena> _ocenaRepository;
         private readonly IUzytkownikService _uzytkownikRepository;
         private readonly IGenericRepository<Przedmiot> _przedmiotRepository;
+        private readonly AppDbContext _dbContext;
 
-        public OcenyController(IGenericRepository<Ocena> ocenaRepository, IUzytkownikService uzytkownikRepository, IGenericRepository<Przedmiot> przedmiotRepository)
+        public OcenyController(IGenericRepository<Ocena> ocenaRepository, IUzytkownikService uzytkownikRepository, IGenericRepository<Przedmiot> przedmiotRepository, AppDbContext dbContext)
         {
             _ocenaRepository = ocenaRepository;
             _uzytkownikRepository = uzytkownikRepository;
             _przedmiotRepository = przedmiotRepository;
+            _dbContext = dbContext;
         }
 
         // GET: api/Oceny
@@ -50,6 +54,36 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(dto);
         }
+        
+        [HttpGet("uczen/{uczenId}/przedmiot/{przedmiotId}")]
+        public async Task<ActionResult<IEnumerable<OcenaDto>>> GetOcenyUczniaPrzedmiotu(int uczenId,int przedmiotId)
+        {
+            var oceny = await _dbContext.Oceny
+                .Include(o => o.Uczen)
+                .Include(o => o.Nauczyciel)
+                .Include(o => o.Przedmiot)
+                .Where(o => o.UczenId == uczenId && o.PrzedmiotId == przedmiotId)
+                .ToListAsync();
+
+            var dto = oceny.Select(o => new OcenaDto
+            {
+                Id = o.Id,
+                DataWystawienia = o.DataWystawienia,
+                Opis = o.Opis,
+                Wartosc = o.Wartosc,
+                Typ = o.Typ,
+                UczenId = o.UczenId,
+                UczenImieNazwisko = $"{o.Uczen.Imie} {o.Uczen.Nazwisko}",
+                NauczycielId = o.NauczycielId,
+                NauczycielImieNazwisko = $"{o.Nauczyciel.Imie} {o.Nauczyciel.Nazwisko}",
+                PrzedmiotId = o.PrzedmiotId,
+                PrzedmiotNazwa = o.Przedmiot.Nazwa
+            });
+
+            return Ok(dto);
+        }
+
+
 
         // GET: api/Oceny/5
         [HttpGet("{id}")]
