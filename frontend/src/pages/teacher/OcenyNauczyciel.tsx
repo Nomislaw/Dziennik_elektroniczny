@@ -107,30 +107,37 @@ export default function OcenyNauczyciel({ nauczyciel }: OcenyNauczycielProps) {
     }
   }, [uczniowieFiltrowani.length]);
 
-  useEffect(() => {
-    const odswiezWszystkieOceny = async () => {
-      if (!wybranaKlasa || !wybranyPrzedmiot || uczniowieFiltrowani.length === 0) return;
-      
-      try {
-        const ocenyPromises = uczniowieFiltrowani.map(u => 
-          pobierzOcenyUczenPrzedmiot(u.id, wybranyPrzedmiot)
-            .then(oceny => ({ uczenId: u.id, oceny: oceny as OcenaDoEdycji[] }))
-            .catch(() => ({ uczenId: u.id, oceny: [] }))
-        );
-        
-        const wyniki = await Promise.all(ocenyPromises);
-        const nowyStan: Record<number, OcenaDoEdycji[]> = {};
-        wyniki.forEach(({ uczenId, oceny }) => {
-          nowyStan[uczenId] = oceny;
-        });
-        setOcenyUcznia(nowyStan);
-      } catch (err) {
-        console.error('Błąd pobierania ocen:', err);
-      }
-    };
-    
-    odswiezWszystkieOceny();
-  }, [wybranaKlasa, wybranyPrzedmiot, uczniowieFiltrowani]);
+ useEffect(() => {
+  const odswiezWszystkieOceny = async () => {
+    if (!wybranaKlasa || !wybranyPrzedmiot || uczniowieFiltrowani.length === 0) return;
+
+    try {
+      const ocenyPromises = uczniowieFiltrowani.map(u => 
+        pobierzOcenyUczenPrzedmiot(u.id, wybranyPrzedmiot)
+          .then(oceny => ({ uczenId: u.id, oceny: oceny as OcenaDoEdycji[] }))
+          .catch(() => ({ uczenId: u.id, oceny: [] }))
+      );
+
+      const wyniki = await Promise.all(ocenyPromises);
+      const nowyStan: Record<number, OcenaDoEdycji[]> = {};
+      wyniki.forEach(({ uczenId, oceny }) => {
+        nowyStan[uczenId] = oceny;
+      });
+      setOcenyUcznia(nowyStan);
+    } catch (err) {
+      console.error('Błąd pobierania ocen:', err);
+    }
+  };
+
+  odswiezWszystkieOceny();
+}, [
+  wybranaKlasa,
+  wybranyPrzedmiot,
+  uczniowieFiltrowani.length,              // tylko długość
+  // ewentualnie też lista id:
+  // JSON.stringify(uczniowieFiltrowani.map(u => u.id)),
+]);
+
 
   const odswiezOceny = useCallback(async (uczenId: number) => {
     if (!wybranyPrzedmiot) return;

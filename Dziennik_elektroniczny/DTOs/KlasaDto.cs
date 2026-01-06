@@ -6,5 +6,6 @@ public class KlasaDto
     public string Nazwa { get; set; }
     
     public int Rok { get; set; }
+    public int PlanId { get; set; }
     
 }

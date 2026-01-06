@@ -42,17 +42,28 @@ namespace Dziennik_elektroniczny.Controllers
 
                 var zajeciaNauczyciela = zajecia
                     .Where(z => z.NauczycielId == nauczycielId)
-                    .OrderBy(z => z.Plan != null ? (int)z.Plan.DzienTygodnia : 7) // ✅ PRZED Select
+                    .OrderBy(z => z != null ? (int)z.DzienTygodnia : 7) // ✅ PRZED Select
                     .ThenBy(z => z.GodzinaRozpoczecia) // ✅ PRZED Select
-                    .Select(z => new ZajeciaDetailsDto
-                    {
-                        Id = z.Id,
-                        Przedmiot = z.Przedmiot != null ? z.Przedmiot.Nazwa : "Brak przedmiotu",
-                        Grupa = z.Plan?.Klasa != null ? z.Plan.Klasa.Nazwa : "Brak klasy",
-                        Godzina = $"{z.GodzinaRozpoczecia}-{z.GodzinaZakonczenia}",
-                        Sala = z.Sala != null ? z.Sala.Numer : "Brak sali",
-                        DzienTygodnia = z.Plan != null ? GetPolishDayName((DayOfWeek)z.Plan.DzienTygodnia) : "Nieznany"
-                    })
+                    .Select(z => new ZajeciaDto
+                        {
+                            Id = z.Id,
+                            GodzinaRozpoczecia = z.GodzinaRozpoczecia,
+                            GodzinaZakonczenia = z.GodzinaZakonczenia,
+                            DzienTygodnia = z.DzienTygodnia,
+
+                            PlanId = z.PlanId,
+                            PlanNazwa = z.Plan?.Klasa.Nazwa,
+                            
+                            KlasaId = z.Plan.Klasa.Id,
+
+                            PrzedmiotId = z.PrzedmiotId,
+                            PrzedmiotNazwa = z.Przedmiot?.Nazwa,
+
+                            NauczycielId = z.NauczycielId,
+                            NauczycielImieNazwisko = $"{z.Nauczyciel?.Imie} {z.Nauczyciel?.Nazwisko}",
+
+                            SalaId = z.SalaId,
+                            SalaNazwa = z.Sala?.Numer})
                     .ToList();
 
                 return Ok(zajeciaNauczyciela);
@@ -138,6 +149,7 @@ namespace Dziennik_elektroniczny.Controllers
                 Id = z.Id,
                 GodzinaRozpoczecia = z.GodzinaRozpoczecia,
                 GodzinaZakonczenia = z.GodzinaZakonczenia,
+                DzienTygodnia = z.DzienTygodnia,
 
                 PlanId = z.PlanId,
                 PlanNazwa = z.Plan?.Id.ToString(),
@@ -154,6 +166,8 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(dto);
         }
+        
+        
 
         // GET: api/Zajecia/5
         [HttpGet("{id}")]
@@ -176,6 +190,7 @@ namespace Dziennik_elektroniczny.Controllers
                 Id = zajecia.Id,
                 GodzinaRozpoczecia = zajecia.GodzinaRozpoczecia,
                 GodzinaZakonczenia = zajecia.GodzinaZakonczenia,
+                DzienTygodnia = zajecia.DzienTygodnia,
 
                 PlanId = zajecia.PlanId,
                 PlanNazwa = zajecia.Plan?.Id.ToString(),
@@ -209,6 +224,9 @@ namespace Dziennik_elektroniczny.Controllers
 
             if (dto.GodzinaZakonczenia != null)
                 zajecia.GodzinaZakonczenia = dto.GodzinaZakonczenia;
+            
+            if (dto.DzienTygodnia != null)
+                zajecia.DzienTygodnia = dto.DzienTygodnia;
 
             if (dto.PlanId.HasValue)
                 zajecia.PlanId = dto.PlanId.Value;
@@ -254,6 +272,7 @@ namespace Dziennik_elektroniczny.Controllers
             {
                 GodzinaRozpoczecia = dto.GodzinaRozpoczecia,
                 GodzinaZakonczenia = dto.GodzinaZakonczenia,
+                DzienTygodnia = dto.DzienTygodnia,
                 PlanId = dto.PlanId,
                 PrzedmiotId = dto.PrzedmiotId,
                 NauczycielId = dto.NauczycielId,

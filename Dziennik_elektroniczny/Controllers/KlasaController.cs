@@ -44,7 +44,7 @@ namespace Dziennik_elektroniczny.Controllers
             var dto = przedmioty.Select(p => new KlasaDto
             {
                 Id = p.Id,
-                Nazwa = p.Nazwa
+                Nazwa = p.Nazwa,
             });
 
             return Ok(dto);
@@ -73,6 +73,7 @@ namespace Dziennik_elektroniczny.Controllers
 
             klasa.Nazwa = dto.Nazwa;
             klasa.Rok = dto.Rok;
+            klasa.PlanId = dto.PlanId;
 
             _klasaRepository.Update(klasa);
             var result = await _klasaRepository.SaveChangesAsync();

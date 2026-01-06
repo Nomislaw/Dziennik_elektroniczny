@@ -82,7 +82,7 @@ export default function TeacherPanel() {
       {/* Main content */}
       <main className="flex-1 p-6 overflow-y-auto">
         {activeTab === "oceny" && <OcenyNauczyciel nauczyciel={user} />}
-        {activeTab === "frekwencja" && <FrekwencjaNauczyciel />}
+        {activeTab === "frekwencja" && <FrekwencjaNauczyciel nauczycielId={user.id} />}
         {activeTab === "settings" && <Settings />} 
       </main>
 

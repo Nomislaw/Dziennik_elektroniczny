@@ -4,6 +4,7 @@
     {
         public string GodzinaRozpoczecia { get; set; }
         public string GodzinaZakonczenia { get; set; }
+        public DayOfWeek? DzienTygodnia { get; set; }
 
         // Relacja 1-do-wielu (odwrotność): Zajęcia należą do jednego planu
         public int PlanId { get; set; }

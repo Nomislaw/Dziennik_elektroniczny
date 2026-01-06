@@ -10,6 +10,9 @@ import SaleList from "../pages/admin/SaleList";
 import PrzedmiotList from "../pages/admin/PrzedmiotList";
 import Settings from "../pages/Settings"; 
 import KlasyList from "../pages/admin/KlasyList";
+import ZajeciaList from "../pages/admin/ZajeciaList";
+import PlanList from "../pages/admin/PlanList";
+import SemestrList from "../pages/admin/SemestrList";
 
 
 export default function AdminDashboard() {
@@ -96,7 +99,7 @@ export default function AdminDashboard() {
     activeTab === "przedmioty" ? "bg-teal-600" : ""
   }`}
 >
-  📘 Przedmioty
+  📚 Przedmioty
 </button>
 
 <button
@@ -107,6 +110,34 @@ export default function AdminDashboard() {
 >
   🏫 Klasy
 </button>
+
+<button
+  onClick={() => setActiveTab("plan")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "plan" ? "bg-teal-600" : ""
+  }`}
+>
+  🗓️ Plany
+</button>
+
+<button
+  onClick={() => setActiveTab("semestry")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "semestry" ? "bg-teal-600" : ""
+  }`}
+>
+  📆 Semestry
+</button>
+
+<button
+  onClick={() => setActiveTab("zajecia")}
+  className={`w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 ${
+    activeTab === "zajecia" ? "bg-teal-600" : ""
+  }`}
+>
+  🧑‍🏫 Zajęcia
+</button>
+
 
 
 {/* <button
@@ -145,6 +176,9 @@ export default function AdminDashboard() {
             {activeTab === "sale" && "Zarządzanie salami"}
             {activeTab === "klasy" && "Zarządzanie klasami"}
             {activeTab === "przedmioty" && "Zarządzanie przedmiotami"}
+            {activeTab === "zajecia" && "Zarządzanie zajęciami"}
+            {activeTab === "plan" && "Zarządzanie planami"}
+            {activeTab === "semestry" && "Zarządzanie semestrami"}
 
 
           </h1>
@@ -159,7 +193,9 @@ export default function AdminDashboard() {
           {activeTab === "przedmioty" && <PrzedmiotList />}
           {activeTab === "klasy" && <KlasyList />}
           {activeTab === "settings" && <Settings />}
-
+          {activeTab === "zajecia" && <ZajeciaList />}
+          {activeTab === "plan" && <PlanList />}
+          {activeTab === "semestry" && <SemestrList />}
 
         </div>
       </main>

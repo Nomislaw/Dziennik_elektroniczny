@@ -1,278 +1,462 @@
-// pages/teacher/FrekwencjaNauczyciel.tsx - WERSJA Z LICZBAMI
+// src/pages/teacher/FrekwencjaNauczyciel.tsx
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import {
+  pobierzFrekwencjeFiltrowane,
+  dodajFrekwencja,
+  edytujFrekwencja,
+  FrekwencjaDetailsDto,
+  FrekwencjaCreateDto,
+  FrekwencjaUpdateDto,
+} from "../../api/FrekwencjaService";
+import {
+  pobierzZajeciaNauczyciela,
+  ZajeciaDto,
+} from "../../api/ZajeciaService";
+import { pobierzUczniow } from "../../api/UzytkownikService";
+import { pobierzDatyDlaDniaTygodnia } from "../../api/SemestrService"; // 🔥 NOWE!
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  getUczniowieDlaZajec, 
-  getFrekwencjaByZajeciaAndDate, 
-  updateFrekwencja, 
-  createFrekwencja, 
-  getZajeciaNauczyciela 
-} from '../../api/FrekwencjaService';
-import { Uzytkownik } from '../../types/Uzytkownik'; 
-import { 
-  FrekwencjaCreateDto, 
-  StatusFrekwencji, 
-  getPolishStatusName,
-  ALL_STATUSES 
-} from '../../types/Frekwencja';
-import { UczenFrekwencja, ZajeciaDetails } from '../../types/Zajecia';
+const dniTygodnia: { value: number; label: string }[] = [
+  { value: 1, label: "Poniedziałek" },
+  { value: 2, label: "Wtorek" },
+  { value: 3, label: "Środa" },
+  { value: 4, label: "Czwartek" },
+  { value: 5, label: "Piątek" },
+];
 
-interface FrekwencjaRowState extends UczenFrekwencja {
-  status: StatusFrekwencji; // Liczba 0-3
-  frekwencjaId?: number;
-  isDirty: boolean;
+interface UczenDto {
+  id: number;
+  imie: string;
+  nazwisko: string;
+  email: string;
+  klasaNazwa: string;
+  klasaId: number;
+  czyEmailPotwierdzony: boolean;
+  rodzice: any[];
 }
 
-const getStatusColor = (status: StatusFrekwencji) => {
-  switch (status) {
-    case StatusFrekwencji.OBECNY: 
-      return 'text-green-600 bg-green-50 border-green-200';
-    case StatusFrekwencji.NIEOBECNY: 
-      return 'text-red-600 bg-red-50 border-red-200';
-    case StatusFrekwencji.SPOZNIONY: 
-      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    case StatusFrekwencji.USPRAWIEDLIWIONY: 
-      return 'text-blue-600 bg-blue-50 border-blue-200';
-    default: 
-      return 'text-gray-600 bg-gray-50 border-gray-200';
-  }
-};
+function todayISO(): string {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
 
-export default function FrekwencjaNauczyciel() {
+interface FrekwencjaNauczycielProps {
+  nauczycielId: number;
+}
+
+const FrekwencjaNauczyciel: React.FC<FrekwencjaNauczycielProps> = ({
+  nauczycielId,
+}) => {
+  const [zajecia, setZajecia] = useState<ZajeciaDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [zajeciaList, setZajeciaList] = useState<ZajeciaDetails[]>([]);
-  const [selectedZajeciaId, setSelectedZajeciaId] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const [rows, setRows] = useState<FrekwencjaRowState[]>([]);
-  
-  const user: Uzytkownik = useMemo(() => {
-    const u = localStorage.getItem('user');
-    return u ? JSON.parse(u) : { id: 1, imie: "Jan", nazwisko: "Kowalski" };
-  }, []);
-  
+  // 🔥 NOWE STANY dla dat
+  const [selectedZajecia, setSelectedZajecia] = useState<ZajeciaDto | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(todayISO());
+  const [availableDates, setAvailableDates] = useState<{ label: string; value: string }[]>([]);
+
+  const [wszyscyUczniowie, setWszyscyUczniowie] = useState<UczenDto[]>([]);
+  const [frekwencjaDlaZajec, setFrekwencjaDlaZajec] = useState<FrekwencjaDetailsDto[]>([]);
+  const [zapisLoading, setZapisLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false); // Zmiany niezapisane
+
+  const [statusy, setStatusy] = useState<Record<number, number>>({});
+  const [frekwencjaIds, setFrekwencjaIds] = useState<Record<number, number>>({});
+
+  // Pobierz uczniów
   useEffect(() => {
-    async function loadZajecia() {
+    const loadUczniowie = async () => {
       try {
-        const data = await getZajeciaNauczyciela(user.id);
-        setZajeciaList(data);
-        if (data.length > 0) {
-          setSelectedZajeciaId(data[0].id);
-        }
-      } catch (err: any) {
-        setError("Nie udało się pobrać listy zajęć.");
+        const uczniowieRes = await pobierzUczniow();
+        console.log("✅ Uczniowie:", uczniowieRes?.length);
+        setWszyscyUczniowie(Array.isArray(uczniowieRes) ? uczniowieRes : []);
+      } catch (error) {
+        console.error("❌ Błąd uczniów:", error);
       }
-    }
-    loadZajecia();
-  }, [user.id]);
-  
+    };
+    loadUczniowie();
+  }, []);
+
+  // Pobierz zajęcia
   useEffect(() => {
-    if (!selectedZajeciaId) return;
-
-    async function fetchData() {
-      setLoading(true);
-      setError(null);
+    const load = async () => {
       try {
-        const [uczniowie, existingFrekwencja] = await Promise.all([
-          getUczniowieDlaZajec(selectedZajeciaId!),
-          getFrekwencjaByZajeciaAndDate(selectedZajeciaId!, selectedDate)
-        ]);
-        
-        const mergedData: FrekwencjaRowState[] = uczniowie.map((uczen: UczenFrekwencja) => { 
-          const existingRecord = existingFrekwencja.find((f: any) => f.uczenId === uczen.id);
-          
-          return {
-            ...uczen,
-            status: existingRecord ? existingRecord.status : StatusFrekwencji.OBECNY, // = 1
-            frekwencjaId: existingRecord ? existingRecord.id : undefined,
-            isDirty: false
-          };
-        });
-
-        mergedData.sort((a, b) => a.nazwisko.localeCompare(b.nazwisko));
-        setRows(mergedData);
-      } catch (err: any) {
-        console.error(err);
-        setError("Wystąpił błąd podczas pobierania listy obecności.");
+        const zajeciaRes = await pobierzZajeciaNauczyciela(nauczycielId);
+        console.log("✅ Zajęcia:", zajeciaRes?.length);
+        setZajecia(Array.isArray(zajeciaRes) ? zajeciaRes : []);
+      } catch (error) {
+        console.error("❌ Błąd zajęć:", error);
       } finally {
         setLoading(false);
       }
+    };
+    load();
+  }, [nauczycielId]);
+
+  // 🔥 NOWE: Pobierz daty z backendu po wybraniu zajęć
+  useEffect(() => {
+    const loadDaty = async () => {
+      if (selectedZajecia) {
+        console.log("📅 Pobieram daty dla dnia:", selectedZajecia.dzienTygodnia);
+        try {
+          const datyRaw = await pobierzDatyDlaDniaTygodnia(selectedZajecia.dzienTygodnia);
+          
+          const formattedDates = datyRaw.map((date: string) => ({
+            label: new Date(date + 'T00:00:00').toLocaleDateString("pl-PL", {
+              weekday: "long",
+              day: "numeric",
+              month: "numeric",
+            }),
+            value: date,
+          }));
+
+          console.log("✅ Daty z backendu:", formattedDates.length);
+          setAvailableDates(formattedDates);
+
+          // Ustaw dzisiaj lub pierwszą datę
+          const todayForDay = getNextWeekday(todayISO(), selectedZajecia.dzienTygodnia);
+          const todayInList = formattedDates.find((d) => d.value === todayForDay);
+          setSelectedDate(todayInList?.value || formattedDates[0]?.value || todayForDay);
+        } catch (error) {
+          console.error("❌ Błąd dat:", error);
+          setAvailableDates([]);
+        }
+      } else {
+        setAvailableDates([]);
+      }
+    };
+    loadDaty();
+  }, [selectedZajecia]);
+
+  // 🔥 NOWE: Automatycznie ładuj frekwencję po zmianie daty
+  useEffect(() => {
+    if (selectedZajecia && selectedDate && availableDates.length > 0) {
+      loadFrekwencja(selectedZajecia.id, selectedDate);
     }
+  }, [selectedZajecia, selectedDate]);
 
-    fetchData();
-  }, [selectedZajeciaId, selectedDate]);
+  const timetableRows = useMemo(() => {
+    const slotsSet = new Set<string>();
+    zajecia.forEach((z) => {
+      slotsSet.add(`${z.godzinaRozpoczecia}-${z.godzinaZakonczenia}`);
+    });
+    const slots = Array.from(slotsSet).sort();
 
-  const handleStatusChange = (uczenId: number, newStatus: StatusFrekwencji) => {
-    setRows(prev => prev.map(row => 
-      row.id === uczenId ? { ...row, status: newStatus, isDirty: true } : row
-    ));
-  };
+    return slots.map((slot) => {
+      const [start, end] = slot.split("-");
+      const byDay: Record<number, ZajeciaDto | null> = {};
+      dniTygodnia.forEach((d) => {
+        byDay[d.value] = zajecia.find(
+          (z) =>
+            z.dzienTygodnia === d.value &&
+            z.godzinaRozpoczecia === start &&
+            z.godzinaZakonczenia === end
+        ) ?? null;
+      });
+      return { slot, start, end, byDay };
+    });
+  }, [zajecia]);
 
-  const markAllPresent = () => {
-    setRows(prev => prev.map(row => ({ 
-      ...row, 
-      status: StatusFrekwencji.OBECNY, // = 1
-      isDirty: true 
-    })));
-  };
-
-  const handleSave = async () => {
-    if (!selectedZajeciaId) return;
-    setSaving(true);
-    
+  // 🔥 Ulepszona funkcja ładowania frekwencji z EDIT/ADD logiką
+  const loadFrekwencja = useCallback(async (zajeciaId: number, data: string) => {
     try {
-      const promises = rows.map(async (row) => {
-        const dto: FrekwencjaCreateDto = {
-          data: selectedDate,
-          status: row.status, // Wysyła liczbę (0, 1, 2, 3)
-          uczenId: row.id,
-          zajeciaId: selectedZajeciaId,
-        };
+      console.log("📥 Ładuję frekwencję:", zajeciaId, data);
+      const frekwencjaRes = await pobierzFrekwencjeFiltrowane(zajeciaId, data);
+      setFrekwencjaDlaZajec(frekwencjaRes);
 
-        if (row.frekwencjaId) {
-          await updateFrekwencja(row.frekwencjaId, { status: row.status, data: selectedDate });
-        } else {
-          await createFrekwencja(dto);
+      const statusMap: Record<number, number> = {};
+      const idMap: Record<number, number> = {};
+      
+      frekwencjaRes.forEach((f: FrekwencjaDetailsDto) => {
+        statusMap[f.uczenId] = f.status;
+        idMap[f.uczenId] = f.id;
+      });
+
+      const uczniowieKlasy = getUczniowieDlaZajec();
+      uczniowieKlasy.forEach((u) => {
+        if (!(u.id in statusMap)) {
+          statusMap[u.id] = -1; // Domyślnie obecny
         }
       });
 
+      console.log("✅ Frekwencja załadowana:", Object.keys(statusMap).length, "uczniów");
+      setStatusy(statusMap);
+      setFrekwencjaIds(idMap);
+      setIsDirty(false);
+    } catch (error) {
+      console.error("❌ Błąd frekwencji:", error);
+    }
+  }, [wszyscyUczniowie]);
+
+  const getUczniowieDlaZajec = (): UczenDto[] => {
+    if (!selectedZajecia) return [];
+    // 🎯 Filtrowanie po planId (klasa)
+    return wszyscyUczniowie.filter((u) => u.klasaId === selectedZajecia.klasaId);
+  };
+
+ function getNextWeekday(dateStr: string, weekday: number): string {
+  const date = new Date(dateStr + "T00:00:00"); // ⬅️ BEZ Z
+  const currentDay = date.getDay(); // 0–6
+  const targetDay = weekday;        // 1–5
+
+  const diff =
+    (targetDay - currentDay + 7) % 7;
+
+  date.setDate(date.getDate() + diff);
+  return date.toISOString().slice(0, 10);
+}
+
+
+  const handleZajeciaClick = (z: ZajeciaDto) => {
+    console.log("🖱️ Wybrano zajęcia:", z.id, z.przedmiotNazwa);
+    setSelectedZajecia(z);
+  };
+
+  const handleDateChange = (date: string) => {
+    console.log("📅 Wybrano datę:", date);
+    setSelectedDate(date);
+  };
+
+  const handleStatusChange = (uczenId: number, value: string) => {
+    const newStatus = Number(value) || 0;
+    setStatusy((prev) => {
+      const newStatusy = { ...prev, [uczenId]: newStatus };
+      setIsDirty(true);
+      return newStatusy;
+    });
+  };
+
+  // 🔥 INTUICYJNY ZAPIS z EDIT/ADD automatyką
+  const handleZapiszFrekwencje = async () => {
+    if (!selectedZajecia) return;
+
+    setZapisLoading(true);
+    try {
+      const uczniowieKlasy = getUczniowieDlaZajec();
+      const promises: Promise<any>[] = [];
+
+      console.log(`💾 Zapisuję ${uczniowieKlasy.length} uczniów...`);
+
+      uczniowieKlasy.forEach((u) => {
+          const status = statusy[u.id] ?? -1;
+
+          if (status === -1) return;
+
+          const frekwencjaId = frekwencjaIds[u.id];
+
+          if (frekwencjaId) {
+            promises.push(
+              edytujFrekwencja(frekwencjaId, { status } as FrekwencjaUpdateDto)
+            );
+          } else {
+            promises.push(
+              dodajFrekwencja({
+                data: selectedDate,
+                status,
+                uczenId: u.id,
+                zajeciaId: selectedZajecia.id,
+              })
+            );
+          }
+        });
+
       await Promise.all(promises);
-      alert("Zapisano pomyślnie!");
-      window.location.reload(); 
-    } catch (err: any) {
-      alert("Błąd zapisu: " + err.message);
+      console.log("✅ Zapiszano pomyślnie!");
+      alert("Frekwencja zapisana pomyślnie!");
+      setIsDirty(false);
+      
+      // 🔄 Przeładuj frekwencję
+      await loadFrekwencja(selectedZajecia.id, selectedDate);
+    } catch (error) {
+      console.error("❌ Błąd zapisu:", error);
+      alert("Błąd zapisu frekwencji");
     } finally {
-      setSaving(false);
+      setZapisLoading(false);
     }
   };
 
-  if (error) return (
-    <div className="p-4 m-4 bg-red-100 border border-red-400 text-red-700 rounded">
-      {error}
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Ładowanie...</div>
+      </div>
+    );
+  }
+
+  const uczniowieDlaZajec = getUczniowieDlaZajec();
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Dziennik Lekcyjny</h1>
-        <p className="text-gray-500">Panel sprawdzania obecności</p>
-      </header>
-      
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <label className="flex flex-col">
-          <span className="text-sm font-semibold text-gray-700 mb-1">Data zajęć</span>
-          <input 
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
-        </label>
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Frekwencja nauczyciela</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          ({zajecia.length} zajęć, {wszyscyUczniowie.length} uczniów)
+        </p>
+      </div>
 
-        <label className="flex flex-col">
-          <span className="text-sm font-semibold text-gray-700 mb-1">Wybierz przedmiot i klasę</span>
-          <select 
-            value={selectedZajeciaId ?? ''}
-            onChange={(e) => setSelectedZajeciaId(Number(e.target.value))}
-            className="p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-            disabled={zajeciaList.length === 0}
-          >
-             {zajeciaList.length === 0 ? <option>Brak zajęć</option> : null}
-             {zajeciaList.map(z => (
-               <option key={z.id} value={z.id}>
-                 {z.przedmiot} — Klasa {z.grupa || 'A'} ({z.godzina})
-               </option>
-             ))}
-          </select>
-        </label>
-
-        <div className="flex justify-end pb-1">
-            <button 
-                onClick={markAllPresent}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium underline"
-                disabled={loading || rows.length === 0}
-            >
-                Zaznacz wszystkich obecnych
-            </button>
+      {/* Plan lekcji */}
+      <div className="bg-white shadow-sm border rounded-lg overflow-hidden mb-6">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Godzina
+                </th>
+                {dniTygodnia.map((d) => (
+                  <th key={d.value} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {d.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {timetableRows.length === 0 ? (
+                <tr>
+                  <td colSpan={1 + dniTygodnia.length} className="px-4 py-8 text-center text-sm text-gray-500">
+                    Brak zajęć dla tego nauczyciela.
+                  </td>
+                </tr>
+              ) : (
+                timetableRows.map((row) => (
+                  <tr key={row.slot}>
+                    <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {row.start} - {row.end}
+                    </td>
+                    {dniTygodnia.map((d) => {
+                      const z = row.byDay[d.value];
+                      if (!z) {
+                        return <td key={d.value} className="px-4 py-2 text-sm text-gray-400">-</td>;
+                      }
+                      return (
+                        <td
+                          key={d.value}
+                          className={`px-4 py-2 text-sm align-top cursor-pointer p-2 rounded transition-colors ${
+                            selectedZajecia?.id === z.id
+                              ? "bg-blue-100 border-2 border-blue-400"
+                              : "hover:bg-blue-50 text-gray-900"
+                          }`}
+                          onClick={() => handleZajeciaClick(z)}
+                        >
+                          <div className="font-medium mb-1">{z.przedmiotNazwa ?? z.przedmiotId}</div>
+                          <div className="text-xs text-gray-600 mb-1">{z.planNazwa ?? `Plan ${z.planId}`}</div>
+                          <div className="text-xs text-gray-600">Sala: {z.salaNazwa ?? z.salaId}</div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="p-10 text-center text-gray-500">Ładowanie listy uczniów...</div>
-        ) : rows.length === 0 ? (
-           <div className="p-10 text-center text-gray-500">Brak uczniów przypisanych do tych zajęć.</div>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-16">Lp.</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Uczeń</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Status obecności</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rows.map((row, index) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4 text-gray-400 font-mono text-sm">
-                    {index + 1}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
-                        {row.imie[0]}{row.nazwisko[0]}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-800">{row.nazwisko} {row.imie}</span>
-                        <span className="text-xs text-gray-400">ID: {row.id}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="inline-block relative">
-                        {/* ✅ WAŻNE: Number(e.target.value) konwertuje string na liczbę */}
-                        <select 
-                        value={row.status}
-                        onChange={(e) => handleStatusChange(row.id, Number(e.target.value) as StatusFrekwencji)}
-                        className={`appearance-none py-2 pl-3 pr-8 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer ${getStatusColor(row.status)}`}
-                        >
-                            {ALL_STATUSES.map(status => (
-                              <option key={status} value={status}>
-                                {getPolishStatusName(status)}
-                              </option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* 🔥 Panel frekwencji z SELECTEM DAT */}
+      {selectedZajecia && availableDates.length > 0 && (
+        <div className="bg-white shadow-sm border rounded-lg p-6">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">
+                Frekwencja – {selectedZajecia.przedmiotNazwa ?? selectedZajecia.przedmiotId}
+              </h3>
+              <div className="flex items-center gap-4 mt-2">
+                <div>
+                  <label className="text-sm text-gray-600 block mb-1">
+                    {dniTygodnia.find((d) => d.value === selectedZajecia.dzienTygodnia)?.label}:
+                  </label>
+                  <select
+                    value={selectedDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+                  >
+                    {availableDates.map((date) => (
+                      <option key={date.value} value={date.value}>
+                        {date.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="text-sm text-gray-600 font-medium">
+                  {uczniowieDlaZajec.length} uczniów
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isDirty && (
+                <span className="text-sm text-orange-600 font-medium">Niezapisane zmiany</span>
+              )}
+              <button
+                onClick={() => {
+                  setSelectedZajecia(null);
+                  setAvailableDates([]);
+                  setStatusy({});
+                  setIsDirty(false);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-sm font-medium px-3 py-1 rounded hover:bg-gray-100"
+              >
+                Zamknij
+              </button>
+            </div>
+          </div>
 
-      <div className="mt-6 flex justify-end">
-        <button 
-          onClick={handleSave}
-          disabled={loading || saving || rows.length === 0}
-          className={`
-            px-6 py-3 rounded-lg text-white font-semibold shadow-lg transition-all
-            ${saving || loading 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5'
-            }
-          `}
-        >
-          {saving ? 'Zapisywanie...' : 'Zapisz zmiany'}
-        </button>
-      </div>
+          {uczniowieDlaZajec.length > 0 ? (
+            <>
+              <div className="overflow-x-auto mb-6">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Uczeń
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {uczniowieDlaZajec.map((u) => (
+                      <tr key={u.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                          {u.imie} {u.nazwisko}
+                          <div className="text-xs text-gray-500 mt-0.5">{u.klasaNazwa}</div>
+                        </td>
+                        <td className="px-4 py-3 align-top text-right">
+                          <select
+                            value={statusy[u.id] ?? -1}
+                            onChange={(e) => handleStatusChange(u.id, e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                          >
+                            <option value={-1}>Nie wystawiono</option>
+                            <option value={0}>Nieobecny</option>
+                            <option value={1}>Obecny</option>
+                            <option value={2}>Spóźniony</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleZapiszFrekwencje}
+                  disabled={zapisLoading || !isDirty}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-md font-medium shadow-sm transition-colors"
+                >
+                  {zapisLoading ? "Zapisywanie..." : "Zapisz frekwencję"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg mb-2">Brak uczniów w klasie</p>
+              <p className="text-sm">{selectedZajecia?.planId}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default FrekwencjaNauczyciel;

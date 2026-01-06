@@ -48,10 +48,7 @@ namespace Dziennik_elektroniczny.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutSemestr(int id, Semestr semestr)
         {
-            if (id != semestr.Id)
-            {
-                return BadRequest("ID w ścieżce nie zgadza się z ID obiektu.");
-            }
+            semestr.Id = id;
 
             // ZMIANA: Logika aktualizacji jak w SaleController
             _semestrRepository.Update(semestr);
@@ -97,5 +94,80 @@ namespace Dziennik_elektroniczny.Controllers
 
             return Ok(new { message = "Usunieto semestr" });
         }
+        
+        
+        
+        [HttpGet("dni-tygodnia/{dzienTygodnia}")]
+        public async Task<ActionResult<IEnumerable<string>>> GetDniTygodnia(int dzienTygodnia)
+        {
+            try 
+            {
+                // 1. Pobierz WSZYSTKIE semestry (nie tylko aktywne)
+                var semestry = await _semestrRepository.GetAllAsync();
+                Console.WriteLine($"🔍 Znaleziono semestrów: {semestry.Count()}");
+        
+                if (!semestry.Any())
+                {
+                    // 🧪 MOCK dla testów - usuń potem
+                    return Ok(new[] { "2026-01-05", "2026-01-12", "2026-01-19" });
+                }
+
+                // 2. Użyj WSZYSTKICH semestrów (nie filtruj po dacie)
+                var wszystkieDni = new List<DateTime>();
+                foreach (var semestr in semestry)
+                {
+                    Console.WriteLine($"📅 Semestr: {semestr.DataRozpoczecia} - {semestr.DataZakonczenia}");
+                    var dniSemestru = GenerateWeekdaysInRange(
+                        semestr.DataRozpoczecia.Date, 
+                        semestr.DataZakonczenia.Date, 
+                        dzienTygodnia+1);
+                    wszystkieDni.AddRange(dniSemestru);
+                }
+
+                // 3. Usuń duplikaty i posortuj
+                var unikalneDni = wszystkieDni
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .Select(d => d.ToString("yyyy-MM-dd"))
+                    .ToList();
+
+                Console.WriteLine($"✅ Zwrócono dat: {unikalneDni.Count}");
+                return Ok(unikalneDni);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Błąd endpointu: {ex.Message}");
+                return StatusCode(500, $"Błąd: {ex.Message}");
+            }
+        }
+
+
+        // 🔧 POMOCNICZA METODA - wszystkie poniedziałki/wtorki/etc. w przedziale
+        private List<DateTime> GenerateWeekdaysInRange(
+            DateTime startDate, 
+            DateTime endDate, 
+            int targetDayOfWeek) // 1=poniedziałek, 2=wtorek, ..., 7=niedziela
+        {
+            var dni = new List<DateTime>();
+            var current = startDate;
+
+            // Znajdź pierwszy dzień tygodnia w przedziale
+            while (current.DayOfWeek != (DayOfWeek)(targetDayOfWeek - 1))
+            {
+                current = current.AddDays(1);
+                if (current > endDate) return dni;
+            }
+
+            // Dodawaj co 7 dni
+            while (current <= endDate)
+            {
+                dni.Add(current.Date);
+                current = current.AddDays(7);
+            }
+
+            return dni;
+        }
     }
-}
+    }
+    
+    

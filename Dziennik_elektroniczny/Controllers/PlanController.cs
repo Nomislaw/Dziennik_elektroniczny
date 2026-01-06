@@ -33,7 +33,7 @@ namespace Dziennik_elektroniczny.Controllers
                 KlasaId = p.KlasaId,
                 KlasaNazwa = p.Klasa.Nazwa,
                 SemestrId = p.SemestrId,
-                SemestrNazwa = $"{p.Semestr.DataRozpoczecia:yyyy-MM-dd} - {p.Semestr.DataZakonczenia:yyyy-MM-dd}"
+                SemestrNazwa = $"{p.Semestr.Numer}. {p.Semestr.DataRozpoczecia:yyyy-MM-dd} - {p.Semestr.DataZakonczenia:yyyy-MM-dd}"
             });
 
             return Ok(dto);
