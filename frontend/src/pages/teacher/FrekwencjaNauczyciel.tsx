@@ -14,6 +14,7 @@ import {
 } from "../../api/ZajeciaService";
 import { pobierzUczniow } from "../../api/UzytkownikService";
 import { pobierzDatyDlaDniaTygodnia } from "../../api/SemestrService"; // 🔥 NOWE!
+import { pobierzPlan } from "../../api/PlanService";
 
 const dniTygodnia: { value: number; label: string }[] = [
   { value: 1, label: "Poniedziałek" },
@@ -22,6 +23,14 @@ const dniTygodnia: { value: number; label: string }[] = [
   { value: 4, label: "Czwartek" },
   { value: 5, label: "Piątek" },
 ];
+
+export interface PlanDto {
+  id: number;
+  klasaId: number;
+  klasaNazwa: string;
+  semestrId: number;
+  semestrNazwa: string;
+}
 
 interface UczenDto {
   id: number;
@@ -53,6 +62,8 @@ const FrekwencjaNauczyciel: React.FC<FrekwencjaNauczycielProps> = ({
   const [selectedZajecia, setSelectedZajecia] = useState<ZajeciaDto | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(todayISO());
   const [availableDates, setAvailableDates] = useState<{ label: string; value: string }[]>([]);
+
+  const [plan, setPlan] = useState<PlanDto | null>(null);
 
   const [wszyscyUczniowie, setWszyscyUczniowie] = useState<UczenDto[]>([]);
   const [frekwencjaDlaZajec, setFrekwencjaDlaZajec] = useState<FrekwencjaDetailsDto[]>([]);
@@ -94,38 +105,46 @@ const FrekwencjaNauczyciel: React.FC<FrekwencjaNauczycielProps> = ({
 
   // 🔥 NOWE: Pobierz daty z backendu po wybraniu zajęć
   useEffect(() => {
-    const loadDaty = async () => {
-      if (selectedZajecia) {
-        console.log("📅 Pobieram daty dla dnia:", selectedZajecia.dzienTygodnia);
-        try {
-          const datyRaw = await pobierzDatyDlaDniaTygodnia(selectedZajecia.dzienTygodnia);
-          
-          const formattedDates = datyRaw.map((date: string) => ({
-            label: new Date(date + 'T00:00:00').toLocaleDateString("pl-PL", {
-              weekday: "long",
-              day: "numeric",
-              month: "numeric",
-            }),
-            value: date,
-          }));
+  const loadDaty = async () => {
+    if (!selectedZajecia) return;
 
-          console.log("✅ Daty z backendu:", formattedDates.length);
-          setAvailableDates(formattedDates);
+    try {
+      console.log("📅 Pobieram plan dla planId:", selectedZajecia.planId);
 
-          // Ustaw dzisiaj lub pierwszą datę
-          const todayForDay = getNextWeekday(todayISO(), selectedZajecia.dzienTygodnia);
-          const todayInList = formattedDates.find((d) => d.value === todayForDay);
-          setSelectedDate(todayInList?.value || formattedDates[0]?.value || todayForDay);
-        } catch (error) {
-          console.error("❌ Błąd dat:", error);
-          setAvailableDates([]);
-        }
-      } else {
-        setAvailableDates([]);
-      }
-    };
-    loadDaty();
-  }, [selectedZajecia]);
+      const planRes = await pobierzPlan(selectedZajecia?.planId ?? 0);
+      setPlan(planRes);
+
+      console.log("📅 Pobieram daty dla semestrId:", planRes.semestrId);
+
+      const datyRaw = await pobierzDatyDlaDniaTygodnia(
+        selectedZajecia.dzienTygodnia,
+        planRes.semestrId // ✅ POPRAWNIE
+      );
+
+      const formattedDates = datyRaw.map((date: string) => ({
+        label: new Date(date + "T00:00:00").toLocaleDateString("pl-PL", {
+          weekday: "long",
+          day: "numeric",
+          month: "numeric",
+        }),
+        value: date,
+      }));
+
+      setAvailableDates(formattedDates);
+
+      const todayForDay = getNextWeekday(todayISO(), selectedZajecia.dzienTygodnia);
+      const todayInList = formattedDates.find(d => d.value === todayForDay);
+
+      setSelectedDate(todayInList?.value || formattedDates[0]?.value || todayForDay);
+    } catch (error) {
+      console.error("❌ Błąd dat:", error);
+      setAvailableDates([]);
+    }
+  };
+
+  loadDaty();
+}, [selectedZajecia]);
+
 
   // 🔥 NOWE: Automatycznie ładuj frekwencję po zmianie daty
   useEffect(() => {
@@ -430,6 +449,7 @@ const FrekwencjaNauczyciel: React.FC<FrekwencjaNauczycielProps> = ({
                             <option value={0}>Nieobecny</option>
                             <option value={1}>Obecny</option>
                             <option value={2}>Spóźniony</option>
+                            <option value={3}>Usprawiedliwiony</option>
                           </select>
                         </td>
                       </tr>

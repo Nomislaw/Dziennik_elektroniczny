@@ -426,7 +426,7 @@ namespace Dziennik_elektroniczny.Controllers
 
         // GET: api/uzytkownik/rodzic/{id}
         [HttpGet("rodzic/{id}")]
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Rodzic")]
         public async Task<ActionResult<RodzicDto>> GetRodzicById(int id)
         {
             var rodzic = await _dbContext.Uzytkownicy

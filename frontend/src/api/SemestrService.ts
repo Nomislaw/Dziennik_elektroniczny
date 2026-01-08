@@ -55,8 +55,8 @@ export function usunSemestr(id: number) {
  * Pobiera WSZYSTKIE daty konkretnego dnia tygodnia z aktywnych semestrów
  * @param dzienTygodnia 1=poniedziałek, 2=wtorek, ..., 5=piątek
  */
-export function pobierzDatyDlaDniaTygodnia(dzienTygodnia: number): Promise<string[]> {
-  return fetchAPI(`${BASE}/dni-tygodnia/${dzienTygodnia}`, { method: "GET" });
+export function pobierzDatyDlaDniaTygodnia(dzienTygodnia: number, semestrId: number): Promise<string[]> {
+  return fetchAPI(`${BASE}/dni-tygodnia/${dzienTygodnia}/semestrId/${semestrId}`, { method: "GET" });
 }
 
 

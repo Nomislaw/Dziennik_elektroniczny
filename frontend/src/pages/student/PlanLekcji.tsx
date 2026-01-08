@@ -1,137 +1,142 @@
-import React, { useState } from "react";
+// src/pages/student/PlanLekcjiUczen.tsx
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  pobierzPlanLekcjiUcznia,
+  PlanLekcjiResponseDto,
+  ZajeciaUczniaDto,
+} from "../../api/PanelUczniaService";
 
-const dni = ["Pon", "Wt", "Śr", "Czw", "Pt"];
-
-// ⬇⬇⬇ PLACEHOLDERY — backend wstawi tu swoje dane z API
-// Przykładowa struktura, jak backend powinien zwracać plan:
-const placeholderPlan = [
-  {
-    id: 1,
-    dzien: "Pon",
-    godzina: "8:00",
-    przedmiot: "Matematyka",
-    nauczyciel: "tu imię nauczyciela",
-    sala: "tu sala",
-    opis: "tu dodatkowy opis np. temat lekcji",
-  },
-  {
-    id: 2,
-    dzien: "Pon",
-    godzina: "9:00",
-    przedmiot: "Historia",
-    nauczyciel: "tu imię nauczyciela",
-    sala: "tu sala",
-    opis: "tu dodatkowy opis",
-  },
-  {
-    id: 3,
-    dzien: "Wt",
-    godzina: "10:00",
-    przedmiot: "Fizyka",
-    nauczyciel: "tu imię nauczyciela",
-    sala: "tu sala",
-    opis: "tu dodatkowy opis",
-  },
-];
-///////////////////////////////////////////////////////////////
-
-const godziny = [
-  "8:00",
-  "9:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
+const dniTygodnia: { value: number; label: string }[] = [
+  { value: 1, label: "Poniedziałek" },
+  { value: 2, label: "Wtorek" },
+  { value: 3, label: "Środa" },
+  { value: 4, label: "Czwartek" },
+  { value: 5, label: "Piątek" },
 ];
 
-export default function Schedule() {
-  const [hovered, setHovered] = useState<any>(null);
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+interface PlanLekcjiUczenProps {
+  uczenId: number;
+}
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setCursorPos({ x: e.clientX + 15, y: e.clientY + 15 }); // tooltip obok kursora
-  };
+const PlanLekcjiUczen: React.FC<PlanLekcjiUczenProps> = ({ uczenId }) => {
+  const [plan, setPlan] = useState<PlanLekcjiResponseDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadPlan = useCallback(async () => {
+    try {
+      console.log("📅 Pobieram plan lekcji dla ucznia:", uczenId);
+      const planRes = await pobierzPlanLekcjiUcznia(uczenId);
+      console.log("✅ Plan:", planRes);
+      setPlan(planRes);
+    } catch (error) {
+      console.error("❌ Błąd planu:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [uczenId]);
+
+  useEffect(() => {
+    loadPlan();
+  }, [loadPlan]);
+
+  const timetableRows = React.useMemo(() => {
+    if (!plan?.zajecia.length) return [];
+
+    const slotsSet = new Set<string>();
+    plan.zajecia.forEach((z) => {
+      slotsSet.add(`${z.godzinaRozpoczecia}-${z.godzinaZakonczenia}`);
+    });
+    const slots = Array.from(slotsSet).sort();
+
+    return slots.map((slot) => {
+      const [start, end] = slot.split("-");
+      const byDay: Record<number, ZajeciaUczniaDto | null> = {};
+      
+      dniTygodnia.forEach((d) => {
+        byDay[d.value] = plan.zajecia.find(
+          (z) => z.dzienTygodnia === d.value && // Zakładamy że ZajeciaUczniaDto ma to pole
+            z.godzinaRozpoczecia === start &&
+            z.godzinaZakonczenia === end
+        ) ?? null;
+      });
+      
+      return { slot, start, end, byDay };
+    });
+  }, [plan]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Ładowanie planu lekcji...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-semibold mb-4">Plan lekcji</h2>
-
-      <div className="grid"
-           style={{
-             gridTemplateColumns: `100px repeat(${dni.length}, 1fr)`,
-           }}>
-
-        {/* Nagłówki dni tygodnia */}
-        <div></div>
-        {dni.map((d) => (
-          <div key={d} className="font-semibold text-center py-2 border-b">
-            {d}
-          </div>
-        ))}
-
-        {/* Reszta planu */}
-        {godziny.map((godzina) => (
-          <React.Fragment key={godzina}>
-            {/* godzina po lewej */}
-            <div className="border-r py-6 px-2 text-sm text-gray-600">
-              {godzina}
-            </div>
-
-            {/* pola na lekcje */}
-            {dni.map((dzien) => {
-              const lekcja = placeholderPlan.find(
-                (l) => l.dzien === dzien && l.godzina === godzina
-              );
-
-              return (
-                <div
-                  key={dzien + godzina}
-                  onMouseEnter={() => setHovered(lekcja)}
-                  onMouseLeave={() => setHovered(null)}
-                  onMouseMove={handleMouseMove}
-                  className="border h-16 relative flex items-center justify-center"
-                >
-                  {lekcja && (
-                    <div className="bg-blue-500 text-white px-2 py-1 rounded text-sm cursor-pointer">
-                      {lekcja.przedmiot}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">📚 Plan lekcji</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Klasa: <span className="font-medium">{plan?.klasaNazwa ?? "Brak"}</span>
+          {" | "}
+          {plan?.zajecia.length ?? 0} zajęć
+        </p>
       </div>
 
-      {/* Tooltip */}
-      {hovered && (
-        <div
-          style={{
-            position: "fixed",
-            top: cursorPos.y,
-            left: cursorPos.x,
-            background: "white",
-            border: "1px solid #ccc",
-            padding: "8px",
-            borderRadius: "6px",
-            width: "220px",
-            zIndex: 999,
-            boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-            pointerEvents: "none",
-          }}
-        >
-          <div><strong>{hovered.przedmiot}</strong></div>
-          <div>Nauczyciel: {hovered.nauczyciel}</div>
-          <div>Sala: {hovered.sala}</div>
-          <div>Opis: {hovered.opis}</div>
-
-          {/* KOMENTARZ DLA BACKENDU:
-              to wszystko (nauczyciel, sala, opis) powinno przyjść z API.
-              Struktura rekordów znajduje się na początku pliku. */}
+      <div className="bg-white shadow-sm border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Godzina
+                </th>
+                {dniTygodnia.map((d) => (
+                  <th key={d.value} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {d.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {timetableRows.length === 0 ? (
+                <tr>
+                  <td colSpan={1 + dniTygodnia.length} className="px-6 py-12 text-center text-sm text-gray-500">
+                    Brak zaplanowanych zajęć
+                  </td>
+                </tr>
+              ) : (
+                timetableRows.map((row) => (
+                  <tr key={row.slot}>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {row.start} - {row.end}
+                    </td>
+                    {dniTygodnia.map((d) => {
+                      const z = row.byDay[d.value];
+                      if (!z) {
+                        return (
+                          <td key={d.value} className="px-6 py-4 text-sm text-gray-400">
+                            —
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={d.value} className="px-6 py-4">
+                          <div className="font-medium text-gray-900 mb-1">{z.przedmiotNazwa}</div>
+                          <div className="text-sm text-gray-600 mb-1">{z.nauczycielImieNazwisko}</div>
+                          <div className="text-xs text-gray-500">Sala: {z.salaNumer}</div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
-}
+};
+
+export default PlanLekcjiUczen;

@@ -9,7 +9,7 @@ namespace Dziennik_elektroniczny.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Uczen")]
+    [Authorize(Roles = "Uczen, Rodzic")]
     public class PanelUczniaController : ControllerBase
     {
         private readonly IPanelUczniaService _panelUczniaService;
@@ -30,52 +30,52 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         // GET: api/panelucznia/oceny
-        [HttpGet("oceny")]
-        public async Task<ActionResult<OcenyUczniaResponseDto>> GetOceny()
+        [HttpGet("oceny/{uczenId}")]
+        public async Task<ActionResult<OcenyUczniaResponseDto>> GetOceny(int uczenId)
         {
-            var uczenId = GetCurrentUczenId();
+            
             if (uczenId == null)
                 return Unauthorized(new ErrorResponse { Errors = new List<string> { "Nieprawidłowy token JWT" } });
 
-            var result = await _panelUczniaService.GetOcenyAsync(uczenId.Value);
+            var result = await _panelUczniaService.GetOcenyAsync(uczenId);
             return Ok(result);
         }
 
         // GET: api/panelucznia/plan-lekcji
-        [HttpGet("plan-lekcji")]
-        public async Task<ActionResult<PlanLekcjiResponseDto>> GetPlanLekcji()
+        [HttpGet("plan-lekcji/{uczenId}")]
+        public async Task<ActionResult<PlanLekcjiResponseDto>> GetPlanLekcji(int uczenId)
         {
-            var uczenId = GetCurrentUczenId();
+            
             if (uczenId == null)
                 return Unauthorized(new ErrorResponse { Errors = new List<string> { "Nieprawidłowy token JWT" } });
 
-            var result = await _panelUczniaService.GetPlanLekcjiAsync(uczenId.Value);
+            var result = await _panelUczniaService.GetPlanLekcjiAsync(uczenId);
             return Ok(result);
         }
 
         // GET: api/panelucznia/frekwencja
-        [HttpGet("frekwencja")]
-        public async Task<ActionResult<FrekwencjaUczniaResponseDto>> GetFrekwencja(
+        [HttpGet("frekwencja/{uczenId}")]
+        public async Task<ActionResult<FrekwencjaUczniaResponseDto>> GetFrekwencja(int uczenId,
             [FromQuery] DateTime? dataOd = null,
             [FromQuery] DateTime? dataDo = null)
         {
-            var uczenId = GetCurrentUczenId();
+            
             if (uczenId == null)
                 return Unauthorized(new ErrorResponse { Errors = new List<string> { "Nieprawidłowy token JWT" } });
 
-            var result = await _panelUczniaService.GetFrekwencjaAsync(uczenId.Value, dataOd, dataDo);
+            var result = await _panelUczniaService.GetFrekwencjaAsync(uczenId, dataOd, dataDo);
             return Ok(result);
         }
 
         // GET: api/panelucznia/podsumowanie
-        [HttpGet("podsumowanie")]
-        public async Task<ActionResult<PodsumowaniePaneluUczniaDto>> GetPodsumowanie()
+        [HttpGet("podsumowanie/{uczenId}")]
+        public async Task<ActionResult<PodsumowaniePaneluUczniaDto>> GetPodsumowanie(int uczenId)
         {
-            var uczenId = GetCurrentUczenId();
+           
             if (uczenId == null)
                 return Unauthorized(new ErrorResponse { Errors = new List<string> { "Nieprawidłowy token JWT" } });
 
-            var result = await _panelUczniaService.GetPodsumowanieAsync(uczenId.Value);
+            var result = await _panelUczniaService.GetPodsumowanieAsync(uczenId);
 
             if (result == null)
                 return NotFound(new ErrorResponse { Errors = new List<string> { "Uczeń nie został znaleziony" } });

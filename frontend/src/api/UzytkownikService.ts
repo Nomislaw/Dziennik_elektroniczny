@@ -33,7 +33,7 @@ export function pobierzNauczycielaById(id: string) {
   return fetchAPI(`${BASE}/nauczyciel/${id}`, { method: "GET" });
 }
 
-export function pobierzRodzicaById(id: string) {
+export function pobierzRodzicaById(id: number) {
   return fetchAPI(`${BASE}/rodzic/${id}`, { method: "GET" });
 }
 

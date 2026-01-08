@@ -62,14 +62,15 @@ namespace Dziennik_elektroniczny.Services
                     .ThenInclude(k => k.Plan)
                         .ThenInclude(p => p.Zajecia)
                             .ThenInclude(z => z.Przedmiot)
+                
                 .Include(u => u.Klasa)
                     .ThenInclude(k => k.Plan)
                         .ThenInclude(p => p.Zajecia)
                             .ThenInclude(z => z.Nauczyciel)
-                //.Include(u => u.Klasa)
-                //    .ThenInclude(k => k.Plan)
-                //        .ThenInclude(p => p.Zajecia)
-                //            .ThenInclude(z => z.Sala)
+                .Include(u => u.Klasa)
+                    .ThenInclude(k => k.Plan)
+                        .ThenInclude(p => p.Zajecia)
+                            .ThenInclude(z => z.Sala)
                 .FirstOrDefaultAsync(u => u.Id == uczenId && u.Rola == Rola.Uczen);
 
             if (uczen?.Klasa?.Plan == null)
@@ -88,8 +89,9 @@ namespace Dziennik_elektroniczny.Services
                     PrzedmiotNazwa = z.Przedmiot.Nazwa,
                     GodzinaRozpoczecia = z.GodzinaRozpoczecia,
                     GodzinaZakonczenia = z.GodzinaZakonczenia,
+                    DzienTygodnia = z.DzienTygodnia,
                     NauczycielImieNazwisko = $"{z.Nauczyciel.Imie} {z.Nauczyciel.Nazwisko}",
-                    SalaNumer = "Brak"
+                    SalaNumer = z.Sala.Numer
                 })
                 .OrderBy(z => z.GodzinaRozpoczecia)
                 .ToList();
@@ -140,7 +142,11 @@ namespace Dziennik_elektroniczny.Services
             };
 
             statystyki.ProcentObecnosci = statystyki.LiczbaOgolem > 0
-                ? Math.Round((double)statystyki.LiczbaObecnosci / statystyki.LiczbaOgolem * 100, 2)
+                ? Math.Round(((double)statystyki.LiczbaObecnosci 
+                    +(double)statystyki.LiczbaSpoznien
+                    +(double)statystyki.LiczbaUsprawiedliwionych)
+                    
+                    / statystyki.LiczbaOgolem * 100, 2)
                 : 0;
 
             return new FrekwencjaUczniaResponseDto
@@ -193,7 +199,9 @@ namespace Dziennik_elektroniczny.Services
             var planLekcji = new List<ZajeciaUczniaDto>();
             if (uczen.Klasa?.Plan?.Zajecia != null)
             {
+                var today = DateTime.Today.DayOfWeek;
                 planLekcji = uczen.Klasa.Plan.Zajecia
+                    .Where(z=>z.DzienTygodnia == today)
                     .Select(z => new ZajeciaUczniaDto
                     {
                         Id = z.Id,
@@ -229,8 +237,16 @@ namespace Dziennik_elektroniczny.Services
                 .ToListAsync();
 
             var procentObecnosci = frekwencje.Any()
-                ? Math.Round((double)frekwencje.Count(f => f.Status == Status.OBECNY) / frekwencje.Count * 100, 2)
+                ? Math.Round(
+                    (
+                        frekwencje.Count(f => f.Status == Status.OBECNY)
+                        + frekwencje.Count(f => f.Status == Status.SPOZNIONY)
+                        + frekwencje.Count(f => f.Status == Status.USPRAWIEDLIWIONY)
+                    ) * 100.0 / frekwencje.Count,
+                    2
+                )
                 : 0;
+
 
             return new PodsumowaniePaneluUczniaDto
             {

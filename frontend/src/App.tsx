@@ -21,6 +21,7 @@ import Home from "./pages/student/Home";
 import PlanLekcji from "./pages/student/PlanLekcji";
 import Oceny from "./pages/student/Oceny";
 import Settings from "./pages/Settings";
+import ParentPanel from "./layouts/ParentPanel";
 
 function Navigation() {
   const location = useLocation();
@@ -64,9 +65,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Home />} />
-          <Route path="plan" element={<PlanLekcji />} />
-          <Route path="oceny" element={<Oceny />} />
+          
           <Route path="settings" element={<Settings />} />
         </Route>
 
@@ -88,6 +87,17 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["Nauczyciel"]}>
               <TeacherPanel />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="settings" element={<Settings />} />
+        </Route>
+
+        <Route
+          path="/parent"
+          element={
+            <ProtectedRoute allowedRoles={["Rodzic"]}>
+              <ParentPanel />
             </ProtectedRoute>
           }
         >

@@ -97,32 +97,27 @@ namespace Dziennik_elektroniczny.Controllers
         
         
         
-        [HttpGet("dni-tygodnia/{dzienTygodnia}")]
-        public async Task<ActionResult<IEnumerable<string>>> GetDniTygodnia(int dzienTygodnia)
+        [HttpGet("dni-tygodnia/{dzienTygodnia}/semestrId/{semestrId}")]
+        public async Task<ActionResult<IEnumerable<string>>> GetDniTygodnia(int dzienTygodnia, int semestrId)
         {
             try 
             {
                 // 1. Pobierz WSZYSTKIE semestry (nie tylko aktywne)
-                var semestry = await _semestrRepository.GetAllAsync();
-                Console.WriteLine($"🔍 Znaleziono semestrów: {semestry.Count()}");
+                var semestr = await _semestrRepository.GetByIdAsync(semestrId);
+              
         
-                if (!semestry.Any())
-                {
-                    // 🧪 MOCK dla testów - usuń potem
-                    return Ok(new[] { "2026-01-05", "2026-01-12", "2026-01-19" });
-                }
+                
 
                 // 2. Użyj WSZYSTKICH semestrów (nie filtruj po dacie)
                 var wszystkieDni = new List<DateTime>();
-                foreach (var semestr in semestry)
-                {
+                
                     Console.WriteLine($"📅 Semestr: {semestr.DataRozpoczecia} - {semestr.DataZakonczenia}");
                     var dniSemestru = GenerateWeekdaysInRange(
                         semestr.DataRozpoczecia.Date, 
                         semestr.DataZakonczenia.Date, 
                         dzienTygodnia+1);
                     wszystkieDni.AddRange(dniSemestru);
-                }
+                
 
                 // 3. Usuń duplikaty i posortuj
                 var unikalneDni = wszystkieDni
