@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Ocena> Oceny { get; set; }
     public DbSet<Frekwencja> Frekwencje { get; set; }
     public DbSet<Zadanie> Zadania { get; set; }
+    public DbSet<Wiadomosc> Wiadomosci { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

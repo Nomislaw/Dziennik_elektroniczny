@@ -20,14 +20,7 @@ namespace Dziennik_elektroniczny.Controllers
         }
 
         // Pomocnicza metoda do pobierania ID ucznia z tokenu
-        private int? GetCurrentUczenId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
-                return null;
-
-            return int.Parse(userIdClaim);
-        }
+        
 
         // GET: api/panelucznia/oceny
         [HttpGet("oceny/{uczenId}")]

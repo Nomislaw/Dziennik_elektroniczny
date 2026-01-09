@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Uzytkownik } from "../types/Uzytkownik";
-
-import Home from "../pages/student/Home";
-import PlanLekcji from "../pages/student/PlanLekcji";
-import Oceny from "../pages/student/Oceny";
-import Settings from "../pages/Settings";
-import Frekwencja from "../pages/student/Frekwencja";
-
 import { pobierzRodzicaById } from "../api/UzytkownikService";
 import HomeParent from "../pages/parent/HomeParent";
-
-// types/Uzytkownik.ts (lub osobny plik types/Rodzic.ts)
+import PlanLekcji from "../pages/student/PlanLekcji";
+import Oceny from "../pages/student/Oceny";
+import Frekwencja from "../pages/student/Frekwencja";
+import Settings from "../pages/Settings";
+import { ChatPage } from "../pages/ChatPage";
 
 export interface UczenSimpleDto {
   id: number;
@@ -31,15 +27,12 @@ export interface RodzicDto {
   dzieci: UczenSimpleDto[];
 }
 
-
-
 export default function RodzicPanel() {
   const navigate = useNavigate();
   const [rodzic, setRodzic] = useState<RodzicDto | null>(null);
   const [selectedUczenId, setSelectedUczenId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("homeparent"); // domyślnie strona główna rodzica
+  const [activeTab, setActiveTab] = useState("homeparent");
 
-  // Pobranie danych rodzica
   useEffect(() => {
     const loadRodzic = async () => {
       const u = localStorage.getItem("user");
@@ -50,9 +43,8 @@ export default function RodzicPanel() {
         const rodzicData = await pobierzRodzicaById(userData.id);
         setRodzic(rodzicData);
         
-        // Ustaw pierwszego ucznia TYLKO gdy mamy dzieci
-        if (rodzicData?.Dzieci?.length > 0) {
-          setSelectedUczenId(rodzicData.Dzieci[0].Id);
+        if (rodzicData?.dzieci?.length > 0) {
+          setSelectedUczenId(rodzicData.dzieci[0].id);
         }
       } catch (error) {
         console.error("Błąd pobierania danych rodzica:", error);
@@ -68,24 +60,19 @@ export default function RodzicPanel() {
     navigate("/login");
   };
 
-  // DODANE: Lepsze sprawdzenie ładowania
   if (!rodzic) return <div>Ładowanie danych rodzica...</div>;
 
-  // DODANE: Sprawdzenie czy mamy dzieci przed renderowaniem selecta
- 
-
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-72 bg-green-700 text-white flex flex-col">
-        <div className="p-4 text-2xl font-bold border-b border-green-600">
+      <aside className="w-72 bg-green-700 text-white flex flex-col shrink-0">
+        <div className="p-4 text-2xl font-bold border-b border-green-600 shrink-0">
           👨‍👩‍👧‍👦 Panel Rodzica
         </div>
 
-        {/* Wybór ucznia - BEZPIECZNY */}
-        <div className="p-4 border-b border-green-600">
-
-<button
+        {/* Górne przyciski */}
+        <div className="p-4 border-b border-green-600 shrink-0">
+          <button
             onClick={() => setActiveTab("homeparent")}
             className={`mb-2 w-full text-left px-4 py-2 rounded-lg hover:bg-green-600 ${
               activeTab === "homeparent" ? "bg-green-600" : ""
@@ -93,11 +80,17 @@ export default function RodzicPanel() {
           >
             🏠 Strona główna rodzica
           </button>
-
-
+          <button
+            onClick={() => setActiveTab("message")}
+            className={`mb-2 w-full text-left px-4 py-2 rounded-lg hover:bg-green-600 ${
+              activeTab === "message" ? "bg-green-600" : ""
+            }`}
+          >
+            ✉️ Wiadomości
+          </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={` w-full text-left px-4 py-2 rounded-lg hover:bg-green-600 ${
+            className={`w-full text-left px-4 py-2 rounded-lg hover:bg-green-600 ${
               activeTab === "settings" ? "bg-green-600" : ""
             }`}
           >
@@ -105,25 +98,24 @@ export default function RodzicPanel() {
           </button>
         </div>
 
-        {/* Reszta bez zmian... */}
-        <nav className="flex-1 p-4 space-y-2">
-              <label className="block text-sm font-semibold mb-2 text-green-100">
+        {/* Nawigacja z wyborem ucznia */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <label className="block text-sm font-semibold mb-2 text-green-100">
             Wybierz ucznia:
           </label>
           <select
-  value={selectedUczenId?.toString() || ""}
-  onChange={(e) => setSelectedUczenId(e.target.value ? Number(e.target.value) : null)}
-  className="w-full p-2 rounded-lg bg-green-600 text-white border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400"
->
-  <option value="">-- Wybierz ucznia --</option>
-  
-  {rodzic.dzieci.map((uczen) => (
-    <option key={uczen.id} value={uczen.id.toString()}>
-      {uczen.imie} {uczen.nazwisko} ({uczen.klasaNazwa || 'Brak klasy'})
-    </option>
-  ))}
-</select>
-         
+            value={selectedUczenId?.toString() || ""}
+            onChange={(e) => setSelectedUczenId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full p-2 rounded-lg bg-green-600 text-white border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400"
+          >
+           
+            {rodzic.dzieci.map((uczen) => (
+              <option key={uczen.id} value={uczen.id.toString()}>
+                {uczen.imie} {uczen.nazwisko} ({uczen.klasaNazwa || 'Brak klasy'})
+              </option>
+            ))}
+          </select>
+          
           <button
             onClick={() => setActiveTab("plan")}
             className={`mt-4 w-full text-left px-4 py-2 rounded-lg hover:bg-green-600 ${
@@ -151,13 +143,11 @@ export default function RodzicPanel() {
           >
             👥 Frekwencja
           </button>
-          
         </nav>
 
-        <div className="p-4 border-t border-green-600">
-          <p className="font-semibold">
-            {rodzic.imie} {rodzic.nazwisko}
-          </p>
+        {/* Stopka */}
+        <div className="p-4 border-t border-green-600 shrink-0">
+          <p className="font-semibold">{rodzic.imie} {rodzic.nazwisko}</p>
           <p className="text-green-200">{rodzic.email}</p>
           <button
             onClick={handleLogout}
@@ -168,19 +158,24 @@ export default function RodzicPanel() {
         </div>
       </aside>
 
-      {/* Main content - BEZPIECZNE warunki */}
-     <main className="flex-1 p-6 overflow-y-auto">
- 
-
-
-  {/* Main content - BEZPIECZNE warunki */}
-  {activeTab === "homeparent" && <HomeParent rodzic={rodzic} />}
-  {activeTab === "plan" && selectedUczenId && <PlanLekcji uczenId={selectedUczenId} />}
-  {activeTab === "oceny" && selectedUczenId && <Oceny uczenId={selectedUczenId} />}
-  {activeTab === "frekwencja" && selectedUczenId && <Frekwencja uczenId={selectedUczenId} />}
-  {activeTab === "settings" && <Settings />}
-</main>
-
+      {/* Main content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          {activeTab === "message" ? (
+            <div className="h-full w-full overflow-hidden">
+              <ChatPage />
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto p-6">
+              {activeTab === "homeparent" && <HomeParent rodzic={rodzic} />}
+              {activeTab === "plan" && selectedUczenId && <PlanLekcji uczenId={selectedUczenId} />}
+              {activeTab === "oceny" && selectedUczenId && <Oceny uczenId={selectedUczenId} />}
+              {activeTab === "frekwencja" && selectedUczenId && <Frekwencja uczenId={selectedUczenId} />}
+              {activeTab === "settings" && <Settings />}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

@@ -22,6 +22,8 @@ import PlanLekcji from "./pages/student/PlanLekcji";
 import Oceny from "./pages/student/Oceny";
 import Settings from "./pages/Settings";
 import ParentPanel from "./layouts/ParentPanel";
+import { Chat } from "./ChatPage/Chat";
+import { ChatPage } from "./pages/ChatPage";
 
 function Navigation() {
   const location = useLocation();
@@ -65,7 +67,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          
+          <Route path="message" element={<ChatPage />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 
@@ -78,6 +80,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
+          <Route path="message" element={<ChatPage />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 
@@ -90,6 +93,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
+          <Route path="message" element={<ChatPage />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 
@@ -101,6 +105,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
+          <Route path="message" element={<ChatPage />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

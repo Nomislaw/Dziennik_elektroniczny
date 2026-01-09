@@ -65,13 +65,13 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-0"> 
+ <div className="p-0"> 
 
-      <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
+ <h1 className="text-2xl font-bold mb-4">⚙️ Ustawienia użytkownika</h1>
 
-      {msg && (
-        <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>
-      )}
+ {msg && (
+ <div className="p-2 mb-4 rounded bg-white shadow text-center">{msg}</div>
+ )}
 
       <div className="mb-4 space-x-2">
         <button

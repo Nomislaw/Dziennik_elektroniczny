@@ -77,14 +77,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
             OnTokenValidated = context =>
             {
-                // Tu dodajesz debug, żeby zobaczyć claimy
                 var claims = context.Principal.Claims.Select(c => new { c.Type, c.Value });
                 Console.WriteLine("Claims w tokenie:");
                 foreach (var c in claims) Console.WriteLine($"{c.Type}: {c.Value}");
                 return Task.CompletedTask;
+            },
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
             }
         };
+
+
     });
+
+
 
 
 builder.Services.AddAuthorization();
@@ -120,6 +134,10 @@ builder.Services.AddSwaggerGen(c=>
     });
 });
 
+builder.Services.AddSignalR();
+
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -127,7 +145,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.MapHub<ChatHub>("/chatHub");
 app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
 app.UseAuthentication(); 

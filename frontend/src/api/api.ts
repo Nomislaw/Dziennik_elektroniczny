@@ -1,4 +1,7 @@
-const API_URL = "https://localhost:44323/api";
+import * as signalR from "@microsoft/signalr";
+
+const URL = "https://localhost:44323";
+const API_URL = `${URL}/api`;
 
 export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("token");
@@ -42,3 +45,32 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
 
   return res.json();
 };
+
+
+
+let connection: signalR.HubConnection | null = null;
+
+export function startChatConnection(token: string, onMessage: (msg: any) => void) {
+  if (connection) return;
+
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${URL}/chatHub`, {
+      accessTokenFactory: () => token,
+    })
+    .withAutomaticReconnect()
+    .build();
+
+  connection.on("ReceiveMessage", onMessage);
+
+  connection
+    .start()
+    .then(() => console.log("✅ SignalR chat connected"))
+    .catch(console.error);
+}
+
+export function stopChatConnection() {
+  if (connection) {
+    connection.stop();
+    connection = null;
+  }
+}

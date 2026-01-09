@@ -8,6 +8,10 @@ export function zmienRoleUzytkownika(id: string, nowaRola: string) {
   return fetchAPI(url, { method: "POST" });
 }
 
+export function pobierzWszystkichUzytkownikow() {
+  return fetchAPI(`${BASE}`, { method: "GET" });
+}
+
 export function pobierzUczniow() {
   return fetchAPI(`${BASE}/uczniowie`, { method: "GET" });
 }

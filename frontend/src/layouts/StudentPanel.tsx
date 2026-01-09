@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Uzytkownik } from "../types/Uzytkownik";
-
 import Home from "../pages/student/Home";
 import PlanLekcji from "../pages/student/PlanLekcji";
 import Oceny from "../pages/student/Oceny";
 import Settings from "../pages/Settings";
 import Frekwencja from "../pages/student/Frekwencja";
+import { ChatPage } from "../pages/ChatPage";
 
 export default function StudentPanel() {
   const navigate = useNavigate();
   const [user, setUser] = useState<Uzytkownik | null>(null);
-  const [activeTab, setActiveTab] = useState("home"); // domyślnie strona główna
+  const [activeTab, setActiveTab] = useState("home");
 
-  // Pobranie danych użytkownika
   useEffect(() => {
     const loadUser = async () => {
       const u = localStorage.getItem("user");
@@ -32,14 +31,13 @@ export default function StudentPanel() {
   if (!user) return <div>Ładowanie danych użytkownika...</div>;
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-blue-700 text-white flex flex-col">
-        <div className="p-4 text-2xl font-bold border-b border-blue-600">
+      <aside className="w-64 bg-blue-700 text-white flex flex-col shrink-0">
+        <div className="p-4 text-2xl font-bold border-b border-blue-600 shrink-0">
           🏫 Panel Ucznia
         </div>
-
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <button
             onClick={() => setActiveTab("home")}
             className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
@@ -48,7 +46,6 @@ export default function StudentPanel() {
           >
             🏠 Strona główna
           </button>
-
           <button
             onClick={() => setActiveTab("plan")}
             className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
@@ -57,7 +54,6 @@ export default function StudentPanel() {
           >
             📅 Plan lekcji
           </button>
-
           <button
             onClick={() => setActiveTab("oceny")}
             className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
@@ -66,7 +62,6 @@ export default function StudentPanel() {
           >
             🧮 Oceny
           </button>
-
           <button
             onClick={() => setActiveTab("frekwencja")}
             className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
@@ -75,7 +70,14 @@ export default function StudentPanel() {
           >
             👥 Frekwencja
           </button>
-
+          <button
+            onClick={() => setActiveTab("message")}
+            className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
+              activeTab === "message" ? "bg-blue-600" : ""
+            }`}
+          >
+            ✉️ Wiadomości
+          </button>
           <button
             onClick={() => setActiveTab("settings")}
             className={`w-full text-left px-4 py-2 rounded-lg hover:bg-blue-600 ${
@@ -85,13 +87,9 @@ export default function StudentPanel() {
             ⚙️ Ustawienia
           </button>
         </nav>
-
-        <div className="p-4 border-t border-blue-600">
-          <p className="font-semibold">
-            {user.imie} {user.nazwisko}
-          </p>
+        <div className="p-4 border-t border-blue-600 shrink-0">
+          <p className="font-semibold">{user.imie} {user.nazwisko}</p>
           <p className="text-blue-200">{user.email}</p>
-
           <button
             onClick={handleLogout}
             className="w-full text-left px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-600 mt-4"
@@ -102,12 +100,22 @@ export default function StudentPanel() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-6 overflow-y-auto">
-        {activeTab === "home" && <Home  uczenId={user.id} />}
-        {activeTab === "plan" && <PlanLekcji uczenId={user.id} />}
-        {activeTab === "oceny" && <Oceny uczenId={user.id} />}
-        {activeTab === "frekwencja" && <Frekwencja uczenId={user.id} />}
-        {activeTab === "settings" && <Settings />}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          {activeTab === "message" ? (
+            <div className="h-full w-full overflow-hidden">
+              <ChatPage />
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto p-6">
+              {activeTab === "home" && <Home uczenId={user.id} />}
+              {activeTab === "plan" && <PlanLekcji uczenId={user.id} />}
+              {activeTab === "oceny" && <Oceny uczenId={user.id} />}
+              {activeTab === "frekwencja" && <Frekwencja uczenId={user.id} />}
+              {activeTab === "settings" && <Settings />}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
