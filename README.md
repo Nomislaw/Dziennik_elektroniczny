@@ -14,3 +14,6 @@ https://nodejs.org
 npx create-react-app frontend --template typescript
 
 npm start
+
+
+npm install @microsoft/signalr
