@@ -1,6 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 
-const URL = "https://localhost:44323";
+const URL = "http://localhost:5273";
 const API_URL = `${URL}/api`;
 
 export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
